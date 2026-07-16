@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 using MeetingBar.Windows.Models;
+using MeetingBar.Windows.Services;
 
 namespace MeetingBar.Windows.Views
 {
@@ -16,6 +17,10 @@ namespace MeetingBar.Windows.Views
         public static readonly DependencyProperty EventsProperty = DependencyProperty.Register(
             nameof(Events), typeof(IEnumerable), typeof(DayTimelineControl),
             new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, EventsChanged));
+        public static readonly DependencyProperty PastHoursProperty = DependencyProperty.Register(nameof(PastHours), typeof(int), typeof(DayTimelineControl), new FrameworkPropertyMetadata(3, FrameworkPropertyMetadataOptions.AffectsRender));
+        public static readonly DependencyProperty FutureHoursProperty = DependencyProperty.Register(nameof(FutureHours), typeof(int), typeof(DayTimelineControl), new FrameworkPropertyMetadata(24, FrameworkPropertyMetadataOptions.AffectsRender));
+        public static readonly DependencyProperty IncludePastDayProperty = DependencyProperty.Register(nameof(IncludePastDay), typeof(bool), typeof(DayTimelineControl), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+        public static readonly DependencyProperty IncludeNextDayProperty = DependencyProperty.Register(nameof(IncludeNextDay), typeof(bool), typeof(DayTimelineControl), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.AffectsRender));
 
         private readonly DispatcherTimer _clock;
         private INotifyCollectionChanged _observedEvents;
@@ -34,6 +39,10 @@ namespace MeetingBar.Windows.Views
             get => (IEnumerable)GetValue(EventsProperty);
             set => SetValue(EventsProperty, value);
         }
+        public int PastHours { get => (int)GetValue(PastHoursProperty); set => SetValue(PastHoursProperty, value); }
+        public int FutureHours { get => (int)GetValue(FutureHoursProperty); set => SetValue(FutureHoursProperty, value); }
+        public bool IncludePastDay { get => (bool)GetValue(IncludePastDayProperty); set => SetValue(IncludePastDayProperty, value); }
+        public bool IncludeNextDay { get => (bool)GetValue(IncludeNextDayProperty); set => SetValue(IncludeNextDayProperty, value); }
 
         protected override void OnRender(DrawingContext drawingContext)
         {
@@ -42,8 +51,9 @@ namespace MeetingBar.Windows.Views
             if (width <= 0) return;
 
             var now = DateTime.Now;
-            var rangeStart = now.AddHours(-3);
-            var rangeEnd = now.AddHours(6);
+            var range = EventWindowPolicy.Range(PastHours, FutureHours, IncludePastDay, IncludeNextDay, now);
+            var rangeStart = range.Item1;
+            var rangeEnd = range.Item2;
             var rangeTicks = (double)(rangeEnd - rangeStart).Ticks;
             const double gridTop = 19;
             var gridBottom = Math.Max(gridTop + 32, ActualHeight - 3);

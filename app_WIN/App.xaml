@@ -35,7 +35,7 @@
       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="{x:Type views:AutoHideScrollViewer}">
         <Grid ClipToBounds="True">
           <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" CanContentScroll="{TemplateBinding CanContentScroll}"/>
-          <ScrollBar x:Name="PART_VerticalScrollBar" Style="{StaticResource OverlayScrollBar}" Orientation="Vertical" HorizontalAlignment="Right" Margin="0,1,2,1" Panel.ZIndex="10"
+          <ScrollBar x:Name="PART_VerticalScrollBar" Style="{StaticResource OverlayScrollBar}" Orientation="Vertical" HorizontalAlignment="Right" Margin="0,1,0,1" Panel.ZIndex="10"
                      Maximum="{TemplateBinding ScrollableHeight}" ViewportSize="{TemplateBinding ViewportHeight}" Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"
                      Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" Opacity="{TemplateBinding ScrollBarOpacity}"/>
         </Grid>

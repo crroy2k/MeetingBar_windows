@@ -25,6 +25,14 @@ namespace MeetingBar.Windows.Services
                 Current.WidgetSettingsVersion = 1;
                 Save();
             }
+            if (Current.EventWindowSettingsVersion < 1)
+            {
+                Current.PastMeetingHours = Current.PastMeetingHours <= 0 ? 3 : Current.PastMeetingHours;
+                Current.FutureMeetingHours = Current.FutureMeetingHours <= 0 ? 24 : Current.FutureMeetingHours;
+                Current.IncludeNextDay = Current.IncludeTomorrow;
+                Current.EventWindowSettingsVersion = 1;
+                Save();
+            }
         }
 
         private AppSettings Load()
@@ -47,6 +55,7 @@ namespace MeetingBar.Windows.Services
         }
 
         public AppSettings CopyCurrent() => _json.Deserialize<AppSettings>(_json.Serialize(Current));
+        public void Reload() { Current = Load(); }
         public void Replace(AppSettings settings) { Current = settings ?? new AppSettings(); Save(); }
     }
 }

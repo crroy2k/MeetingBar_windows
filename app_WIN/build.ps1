@@ -20,6 +20,21 @@ if (!(Test-Path $msbuild)) { throw "MSBuild not found. Install Visual Studio 202
 & $msbuild (Join-Path $root "MeetingBar.Windows.csproj") /t:Rebuild /p:Configuration=$Configuration /m
 if ($LASTEXITCODE -ne 0) { throw "MeetingBar build failed." }
 
+$dotnet = $env:MEETINGBAR_DOTNET
+if (!$dotnet) {
+    $sdkCommand = Get-Command dotnet -ErrorAction SilentlyContinue
+    if ($sdkCommand -and (& $sdkCommand.Source --list-sdks)) { $dotnet = $sdkCommand.Source }
+}
+if (!$dotnet -and (Test-Path "E:\codex-tools\dotnet8\dotnet.exe")) { $dotnet = "E:\codex-tools\dotnet8\dotnet.exe" }
+if (!$dotnet -or !(Test-Path $dotnet)) { throw ".NET 8 SDK not found. Set MEETINGBAR_DOTNET to dotnet.exe." }
+$env:NUGET_PACKAGES = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:LOCALAPPDATA "NuGet\Packages" }
+$settingsPublish = Join-Path $root "SettingsApp\bin\$Configuration\publish-folder"
+& $dotnet publish (Join-Path $root "SettingsApp\MeetingBar.Settings.csproj") -c $Configuration -r win-x64 --self-contained true -p:Platform=x64 -p:PublishSingleFile=false -p:WindowsAppSDKSelfContained=true -p:EnableMsixTooling=true -p:PublishTrimmed=false -o $settingsPublish
+if ($LASTEXITCODE -ne 0) { throw "MeetingBar WinUI settings build failed." }
+$settingsOutput = Join-Path $root "bin\$Configuration\Settings"
+New-Item -ItemType Directory -Force $settingsOutput | Out-Null
+Copy-Item (Join-Path $settingsPublish "*") $settingsOutput -Recurse -Force
+
 if ($Test) {
     & $msbuild (Join-Path $root "Tests\MeetingBar.Tests.csproj") /t:Rebuild /p:Configuration=$Configuration /m
     if ($LASTEXITCODE -ne 0) { throw "MeetingBar test build failed." }
@@ -32,9 +47,12 @@ if ($Package) {
     $stage = Join-Path $dist "portable"
     New-Item -ItemType Directory -Force $stage | Out-Null
     Copy-Item (Join-Path $root "bin\$Configuration\MeetingBar.exe") (Join-Path $stage "MeetingBar.exe") -Force
+    $settingsStage = Join-Path $stage "Settings"
+    New-Item -ItemType Directory -Force $settingsStage | Out-Null
+    Copy-Item (Join-Path $root "bin\$Configuration\Settings\*") $settingsStage -Recurse -Force
     Copy-Item (Join-Path $root "README.md") (Join-Path $stage "README.md") -Force
     Copy-Item (Join-Path $root "THIRD-PARTY-NOTICES.md") (Join-Path $stage "THIRD-PARTY-NOTICES.md") -Force
     Copy-Item (Join-Path $root "..\LICENSE") (Join-Path $stage "LICENSE") -Force
-    Compress-Archive -Path (Join-Path $stage "MeetingBar.exe"), (Join-Path $stage "README.md"), (Join-Path $stage "THIRD-PARTY-NOTICES.md"), (Join-Path $stage "LICENSE") -DestinationPath (Join-Path $dist "MeetingBar-Windows-portable.zip") -Force
+    Compress-Archive -Path (Join-Path $stage "MeetingBar.exe"), $settingsStage, (Join-Path $stage "README.md"), (Join-Path $stage "THIRD-PARTY-NOTICES.md"), (Join-Path $stage "LICENSE") -DestinationPath (Join-Path $dist "MeetingBar-Windows-portable.zip") -Force
     Write-Host "Package: $dist\MeetingBar-Windows-portable.zip"
 }

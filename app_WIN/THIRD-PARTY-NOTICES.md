@@ -9,3 +9,7 @@ The artwork is resized and combined into a sprite atlas for MeetingBar for Windo
 ## Lucide
 
 Interface icon geometry is derived from [Lucide](https://lucide.dev/), copyright the Lucide contributors, and licensed under the ISC License.
+
+## Microsoft Windows App SDK and .NET
+
+The portable WinUI settings host includes Microsoft Windows App SDK 2.2 and the Microsoft .NET 8 runtime. Both are distributed under the MIT License. Microsoft does not endorse this application.

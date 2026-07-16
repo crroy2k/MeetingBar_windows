@@ -1,12 +1,17 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Pipes;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using System.Windows;
 using System.Windows.Interop;
+using System.Web.Script.Serialization;
 using MeetingBar.Windows.Interop;
 using MeetingBar.Windows.Models;
 using MeetingBar.Windows.ViewModels;
@@ -30,6 +35,7 @@ namespace MeetingBar.Windows.Services
         private PopupWindow _popup;
         private TaskbarWidgetWindow _widget;
         private readonly CancellationTokenSource _ipcCancellation = new CancellationTokenSource();
+        private readonly object _settingsStateGate = new object();
 
         public AppController()
         {
@@ -46,7 +52,7 @@ namespace MeetingBar.Windows.Services
             _tray.ContextMenuStrip = menu;
             _notifications = new NotificationService(_settings, _opener, _tray);
             _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) }; _positionTimer.Tick += (s, e) => { EnsureWidgetVisible(); UpdateTrayIcon(_main.NextEvent); };
-            _sync.Changed += (s, e) => Application.Current.Dispatcher.BeginInvoke(new Action(UpdateTray));
+            _sync.Changed += (s, e) => Application.Current.Dispatcher.BeginInvoke(new Action(() => { UpdateTray(); WriteSettingsState(); }));
             var parameters = new HwndSourceParameters("MeetingBar.MessageWindow") { Width = 0, Height = 0, WindowStyle = unchecked((int)0x80000000) };
             _messageWindow = new HwndSource(parameters); _messageWindow.AddHook(WndProc);
         }
@@ -56,7 +62,7 @@ namespace MeetingBar.Windows.Services
             ApplySettings();
             _popup = new PopupWindow(_main, OpenSettings);
             _popup.Preload();
-            _sync.Start(); _notifications.Start(() => _sync.Events); _positionTimer.Start(); UpdateTray(); _ = ListenForCommands();
+            _sync.Start(); _notifications.Start(() => _sync.Events); _positionTimer.Start(); UpdateTray(); WriteSettingsState(); _ = ListenForCommands();
         }
 
         private async Task ListenForCommands()
@@ -88,6 +94,12 @@ namespace MeetingBar.Windows.Services
                 case "create": _opener.Open(_settings.Current.CreateMeetingUrl); break;
                 case "refresh": _ = _sync.RefreshAsync(); break;
                 case "settings": OpenSettings(); break;
+                case "reload": _ = ReloadSettings(); break;
+                case "connect-google": _ = ConnectGoogleFromSettings(); break;
+                case "debug-inject": InjectDebugEvent(); break;
+                case "debug-notification": TriggerDebugNotification(false); break;
+                case "debug-reminder": TriggerDebugNotification(true); break;
+                case "debug-clear": _sync.ClearDebugEvents(); break;
                 case "quit": Application.Current.Shutdown(); break;
                 default: ShowPopup(); break;
             }
@@ -159,10 +171,122 @@ namespace MeetingBar.Windows.Services
 
         private void OpenSettings()
         {
-            var existing = Application.Current.Windows;
-            foreach (Window window in existing) if (window is SettingsWindow) { window.Activate(); return; }
-            var vm = new SettingsViewModel(_settings, _sync, async () => { ApplySettings(); await _sync.RefreshAsync(); });
-            new SettingsWindow(vm).Show();
+            WriteSettingsState();
+            var executable = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Settings", "MeetingBar.Settings.exe");
+            if (!File.Exists(executable))
+            {
+                MessageBox.Show("The WinUI Settings folder is missing. Re-extract the complete portable package.", "MeetingBar", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            var existing = Process.GetProcessesByName("MeetingBar.Settings").FirstOrDefault();
+            if (existing != null)
+            {
+                if (existing.MainWindowHandle != IntPtr.Zero)
+                {
+                    NativeMethods.ShowWindow(existing.MainWindowHandle, 9);
+                    NativeMethods.SetForegroundWindow(existing.MainWindowHandle);
+                }
+                existing.Dispose();
+                return;
+            }
+            Process.Start(new ProcessStartInfo(executable) { WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory, UseShellExecute = true });
+        }
+
+        private async Task ReloadSettings()
+        {
+            _settings.Reload();
+            StartupService.SetEnabled(_settings.Current.StartWithWindows);
+            ApplySettings();
+            await _sync.RefreshAsync();
+            WriteSettingsState();
+        }
+
+        private async Task ConnectGoogleFromSettings()
+        {
+            _settings.Reload();
+            WriteSettingsState("Opening Google sign-in. Approve read-only calendar access in your browser.", true);
+            try
+            {
+                await _sync.Google.ConnectAsync(_settings.Current);
+                _settings.Current.Provider = CalendarProviderKind.Google;
+                _settings.Save();
+                ApplySettings();
+                WriteSettingsState("Connected as " + _settings.Current.GoogleAccountEmail + ". Loading calendars…", true);
+                await _sync.RefreshAsync();
+                WriteSettingsState("Connected as " + _settings.Current.GoogleAccountEmail, false);
+            }
+            catch (Exception error)
+            {
+                AppLog.Error("Google connect", error);
+                WriteSettingsState(error.Message, false);
+            }
+        }
+
+        private void InjectDebugEvent()
+        {
+            try
+            {
+                var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MeetingBar", "debug-request.json");
+                var request = File.Exists(path) ? new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(File.ReadAllText(path, Encoding.UTF8)) : null;
+                var title = DebugString(request, "Title", "Test meeting");
+                var start = DebugInt(request, "StartMinutes", 5);
+                var duration = DebugInt(request, "DurationMinutes", 30);
+                var service = DebugString(request, "Service", "Google Meet");
+                var color = DebugString(request, "Color", "#0078D4");
+                _sync.InjectDebugEvent(DebugEventFactory.Create(title, start, duration, service, color, DateTime.Now));
+            }
+            catch (Exception error) { AppLog.Error("Debug event", error); }
+        }
+
+        private void TriggerDebugNotification(bool fullScreen)
+        {
+            var item = _sync.LatestDebugEvent ?? DebugEventFactory.Create("Test meeting reminder", 5, 30, "Google Meet", "#0078D4", DateTime.Now);
+            _notifications.ShowTest(item, fullScreen);
+        }
+
+        private static string DebugString(Dictionary<string, object> values, string key, string fallback) =>
+            values != null && values.ContainsKey(key) && values[key] != null ? Convert.ToString(values[key]) : fallback;
+        private static int DebugInt(Dictionary<string, object> values, string key, int fallback)
+        {
+            try { return values != null && values.ContainsKey(key) ? Convert.ToInt32(values[key]) : fallback; }
+            catch { return fallback; }
+        }
+
+        private void WriteSettingsState(string message = null, bool busy = false)
+        {
+            try
+            {
+                var connected = _sync.Google.IsConnected(_settings.Current);
+                var status = message;
+                if (string.IsNullOrWhiteSpace(status))
+                {
+                    if (!connected) status = "Not connected";
+                    else if (!_sync.Status.IsHealthy && !string.IsNullOrWhiteSpace(_sync.Status.Message)) status = _sync.Status.Message;
+                    else status = "Connected as " + _settings.Current.GoogleAccountEmail;
+                }
+                var state = new Dictionary<string, object>
+                {
+                    ["StatusMessage"] = status,
+                    ["IsBusy"] = busy,
+                    ["GoogleAccountEmail"] = _settings.Current.GoogleAccountEmail ?? "",
+                    ["Calendars"] = _sync.Calendars.Select(x => new Dictionary<string, object>
+                    {
+                        ["Id"] = x.Id ?? "", ["Name"] = x.Name ?? "", ["Color"] = x.Color ?? "#6D7CFF"
+                    }).ToList()
+                };
+                var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MeetingBar");
+                Directory.CreateDirectory(folder);
+                var path = Path.Combine(folder, "settings-state.json");
+                var temporary = path + ".tmp";
+                var json = new JavaScriptSerializer().Serialize(state);
+                lock (_settingsStateGate)
+                {
+                    File.WriteAllText(temporary, json, new UTF8Encoding(false));
+                    if (File.Exists(path)) File.Replace(temporary, path, null);
+                    else File.Move(temporary, path);
+                }
+            }
+            catch { }
         }
 
         private void UpdateTray()

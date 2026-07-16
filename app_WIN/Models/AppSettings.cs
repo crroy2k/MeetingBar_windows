@@ -27,6 +27,11 @@ namespace MeetingBar.Windows.Models
         public bool ShowFreeEvents { get; set; } = true;
         public bool RequireMeetingLink { get; set; }
         public bool IncludeTomorrow { get; set; } = true;
+        public int PastMeetingHours { get; set; } = 3;
+        public int FutureMeetingHours { get; set; } = 24;
+        public bool IncludePastDay { get; set; }
+        public bool IncludeNextDay { get; set; } = true;
+        public int EventWindowSettingsVersion { get; set; }
         public bool StartWithWindows { get; set; }
         public bool NotifyBeforeMeeting { get; set; } = true;
         public int NotifyMinutesBefore { get; set; } = 5;

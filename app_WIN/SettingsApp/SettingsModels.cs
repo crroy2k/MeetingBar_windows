@@ -1,0 +1,164 @@
+using System.IO.Pipes;
+using System.Text;
+using System.Text.Json;
+
+namespace MeetingBar.SettingsApp;
+
+public enum WidgetMode { TrayOnly, NearTray, TaskbarLeft }
+public enum CalendarProviderKind { Outlook, Ics, Google }
+public enum TitleMode { Full, Generic, Dot, Hidden }
+public enum TimeMode { Countdown, StartTime, Hidden }
+
+public sealed class Bookmark
+{
+    public string Name { get; set; } = "";
+    public string Url { get; set; } = "";
+}
+
+public sealed class AppSettings
+{
+    public WidgetMode WidgetMode { get; set; } = WidgetMode.NearTray;
+    public double WidgetWidth { get; set; } = 500;
+    public double WidgetOffsetX { get; set; }
+    public double WidgetOffsetY { get; set; }
+    public bool UseAutomaticWidgetColor { get; set; } = true;
+    public string WidgetBackgroundColor { get; set; } = "#202020";
+    public int WidgetSettingsVersion { get; set; } = 1;
+    public TitleMode TitleMode { get; set; } = TitleMode.Full;
+    public TimeMode TimeMode { get; set; } = TimeMode.Countdown;
+    public bool ShowOngoingTimeRemaining { get; set; } = true;
+    public int TitleMaxLength { get; set; } = 64;
+    public bool ShowServiceIcon { get; set; } = true;
+    public bool ShowAllDayEvents { get; set; } = true;
+    public bool ShowDeclinedEvents { get; set; }
+    public bool ShowTentativeEvents { get; set; } = true;
+    public bool ShowFreeEvents { get; set; } = true;
+    public bool RequireMeetingLink { get; set; }
+    public bool IncludeTomorrow { get; set; } = true;
+    public int PastMeetingHours { get; set; } = 3;
+    public int FutureMeetingHours { get; set; } = 24;
+    public bool IncludePastDay { get; set; }
+    public bool IncludeNextDay { get; set; } = true;
+    public int EventWindowSettingsVersion { get; set; } = 1;
+    public bool StartWithWindows { get; set; }
+    public bool NotifyBeforeMeeting { get; set; } = true;
+    public int NotifyMinutesBefore { get; set; } = 5;
+    public bool NotifyAtEnd { get; set; }
+    public bool FullscreenReminder { get; set; }
+    public bool AutoJoin { get; set; }
+    public int AutoJoinMinutesBefore { get; set; }
+    public bool GlobalJoinHotkey { get; set; } = true;
+    public int RefreshMinutes { get; set; } = 3;
+    public CalendarProviderKind Provider { get; set; } = CalendarProviderKind.Outlook;
+    public string IcsSources { get; set; } = "";
+    public string GoogleClientId { get; set; } = "";
+    public string GoogleClientSecret { get; set; } = "";
+    public string GoogleRefreshTokenProtected { get; set; } = "";
+    public string GoogleAccountEmail { get; set; } = "";
+    public List<string> SelectedCalendarIds { get; set; } = [];
+    public List<string> HiddenTitlePatterns { get; set; } = [];
+    public List<string> CustomMeetingRegexes { get; set; } = [];
+    public List<string> DismissedEventIds { get; set; } = [];
+    public List<Bookmark> Bookmarks { get; set; } = [];
+    public string CreateMeetingUrl { get; set; } = "https://meet.google.com/new";
+    public string PreferredBrowserPath { get; set; } = "";
+    public string PreferredBrowserArguments { get; set; } = "";
+}
+
+public sealed class CalendarState
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Color { get; set; } = "#6D7CFF";
+}
+
+public sealed class SettingsState
+{
+    public string StatusMessage { get; set; } = "";
+    public bool IsBusy { get; set; }
+    public string GoogleAccountEmail { get; set; } = "";
+    public List<CalendarState> Calendars { get; set; } = [];
+}
+
+public sealed class DebugRequest
+{
+    public string Title { get; set; } = "Test meeting";
+    public int StartMinutes { get; set; } = 5;
+    public int DurationMinutes { get; set; } = 30;
+    public string Service { get; set; } = "Google Meet";
+    public string Color { get; set; } = "#0078D4";
+}
+
+public static class SettingsStore
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true
+    };
+
+    public static string FolderPath { get; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MeetingBar");
+    public static string SettingsPath { get; } = Path.Combine(FolderPath, "settings.json");
+    public static string StatePath { get; } = Path.Combine(FolderPath, "settings-state.json");
+    public static string DebugRequestPath { get; } = Path.Combine(FolderPath, "debug-request.json");
+
+    public static AppSettings Load()
+    {
+        try
+        {
+            if (!File.Exists(SettingsPath)) return new AppSettings();
+            return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath, Encoding.UTF8), JsonOptions) ?? new AppSettings();
+        }
+        catch (Exception error)
+        {
+            SettingsLog.Write("Load settings: " + error.Message);
+            return new AppSettings();
+        }
+    }
+
+    public static SettingsState LoadState()
+    {
+        try
+        {
+            if (!File.Exists(StatePath)) return new SettingsState();
+            return JsonSerializer.Deserialize<SettingsState>(File.ReadAllText(StatePath, Encoding.UTF8), JsonOptions) ?? new SettingsState();
+        }
+        catch { return new SettingsState(); }
+    }
+
+    public static void Save(AppSettings settings)
+    {
+        Directory.CreateDirectory(FolderPath);
+        var temporary = SettingsPath + ".winui.tmp";
+        File.WriteAllText(temporary, JsonSerializer.Serialize(settings, JsonOptions), new UTF8Encoding(false));
+        File.Move(temporary, SettingsPath, true);
+    }
+
+    public static void SaveDebugRequest(DebugRequest request)
+    {
+        Directory.CreateDirectory(FolderPath);
+        File.WriteAllText(DebugRequestPath, JsonSerializer.Serialize(request, JsonOptions), new UTF8Encoding(false));
+    }
+
+    public static async Task SendCommandAsync(string command)
+    {
+        using var pipe = new NamedPipeClientStream(".", "MeetingBar.Windows.Commands", PipeDirection.Out, PipeOptions.Asynchronous);
+        await pipe.ConnectAsync(1800);
+        await using var writer = new StreamWriter(pipe, new UTF8Encoding(false)) { AutoFlush = true };
+        await writer.WriteLineAsync(command);
+    }
+}
+
+public static class SettingsLog
+{
+    public static void Write(string message)
+    {
+        try
+        {
+            Directory.CreateDirectory(SettingsStore.FolderPath);
+            File.AppendAllText(Path.Combine(SettingsStore.FolderPath, "meetingbar.log"),
+                DateTimeOffset.Now.ToString("o") + " ERROR Settings UI: " + message.Replace('\r', ' ').Replace('\n', ' ') + Environment.NewLine);
+        }
+        catch { }
+    }
+}

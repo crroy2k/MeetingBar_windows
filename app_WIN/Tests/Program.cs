@@ -53,6 +53,21 @@ namespace MeetingBar.Tests
                 var past = new CalendarEvent { Start = DateTime.Now.AddHours(-2), End = DateTime.Now.AddMinutes(-20) };
                 Contains("left", current.Remaining); Contains("Ended", past.Countdown);
             });
+            Test("event window hours respect day-boundary toggles", () =>
+            {
+                var now = new DateTime(2026, 7, 16, 10, 0, 0);
+                var clamped = EventWindowPolicy.Range(24, 24, false, false, now);
+                Equal(now.Date, clamped.Item1); Equal(now.Date.AddDays(1), clamped.Item2);
+                var expanded = EventWindowPolicy.Range(24, 24, true, true, now);
+                Equal(now.AddHours(-24), expanded.Item1); Equal(now.AddHours(24), expanded.Item2);
+            });
+            Test("debug events carry provider icon data without calendar writes", () =>
+            {
+                var now = new DateTime(2026, 7, 16, 10, 0, 0);
+                var item = DebugEventFactory.Create("UI test", 5, 30, "Microsoft Teams", "invalid", now);
+                Equal("Microsoft Teams", item.MeetingService); Contains("teams.microsoft.com", item.MeetingUrl);
+                Equal("#0078D4", item.CalendarColor); Equal("meetingbar-debug", item.CalendarId);
+            });
             Console.WriteLine(_failed == 0 ? "All MeetingBar tests passed." : _failed + " test(s) failed.");
             Environment.ExitCode = _failed == 0 ? 0 : 1;
         }

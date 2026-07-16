@@ -25,6 +25,14 @@ namespace MeetingBar.Windows.Services
         }
 
         public void Start(Func<IReadOnlyList<CalendarEvent>> events) { _events = events; _timer.Start(); }
+        public void ShowTest(CalendarEvent item, bool fullScreen)
+        {
+            if (item == null) return;
+            _tray.BalloonTipTitle = "TEST · " + item.Title;
+            _tray.BalloonTipText = item.CanJoin ? item.Countdown + " · Click MeetingBar to join" : item.Countdown;
+            _tray.ShowBalloonTip(7000);
+            if (fullScreen) new ReminderWindow(item, () => _opener.Open(item)).Show();
+        }
         private void Check()
         {
             var now = DateTime.Now; var settings = _settings.Current;

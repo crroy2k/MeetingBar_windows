@@ -11,7 +11,7 @@
       <Border Grid.Row="0" Background="#66202020" CornerRadius="9" Padding="10,7,10,8" Margin="0,0,0,12">
         <StackPanel>
           <TextBlock Text="TIMELINE" Foreground="{StaticResource MutedBrush}" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,5"/>
-          <views:DayTimelineControl Events="{Binding Events}" Height="62" AutomationProperties.Name="Event timeline"/>
+          <views:DayTimelineControl Events="{Binding Events}" PastHours="{Binding TimelinePastHours}" FutureHours="{Binding TimelineFutureHours}" IncludePastDay="{Binding TimelineIncludesPastDay}" IncludeNextDay="{Binding TimelineIncludesNextDay}" Height="62" AutomationProperties.Name="Event timeline"/>
         </StackPanel>
       </Border>
 
@@ -22,7 +22,7 @@
           <views:EmojiTextBlock Grid.Row="1" EmojiText="{Binding NextTitle}" Style="{StaticResource EmojiText}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,6,0,0"/>
           <TextBlock Grid.Row="2" Text="{Binding NextMeta}" Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0"/>
           <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,13,0,0">
-            <Button Command="{Binding JoinCommand}" IsEnabled="{Binding CanJoinNext}" Style="{StaticResource AccentButton}"><StackPanel Orientation="Horizontal"><views:LucideIcon Kind="Video" Stroke="White" Width="15" Height="15" Margin="0,0,7,0"/><TextBlock Text="Join meeting"/></StackPanel></Button>
+            <Button Command="{Binding JoinCommand}" IsEnabled="{Binding CanJoinNext}" Style="{StaticResource AccentButton}"><StackPanel Orientation="Horizontal"><Image Source="{Binding NextEvent.MeetingService, Converter={StaticResource MeetingServiceIcon}}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,7,0"/><TextBlock Text="Join meeting"/></StackPanel></Button>
           </StackPanel>
         </Grid>
       </Border>
@@ -32,7 +32,7 @@
           <ItemsControl ItemsSource="{Binding Events}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Grid x:Name="EventRow" Margin="1,0,6,4" Background="Transparent" ToolTipService.InitialShowDelay="320" ToolTipService.BetweenShowDelay="80" ToolTipService.ShowDuration="60000">
+                <Grid x:Name="EventRow" Margin="1,0,0,4" Background="Transparent" ToolTipService.InitialShowDelay="320" ToolTipService.BetweenShowDelay="80" ToolTipService.ShowDuration="60000">
                   <Grid.Style><Style TargetType="Grid"><Setter Property="Opacity" Value="1"/><Style.Triggers><DataTrigger Binding="{Binding IsPast}" Value="True"><Setter Property="Opacity" Value="0.42"/></DataTrigger></Style.Triggers></Style></Grid.Style>
                   <Grid.ToolTip>
                     <ToolTip Placement="Right" HorizontalOffset="10" Background="Transparent" BorderThickness="0" Padding="0" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
@@ -60,14 +60,14 @@
                     <views:EmojiTextBlock EmojiText="{Binding Title}" Style="{StaticResource EmojiText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                     <TextBlock Text="{Binding CalendarName}" Foreground="{StaticResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                   </StackPanel>
-                  <Button Grid.Column="3" Command="{Binding DataContext.JoinCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding CanJoin, Converter={StaticResource BooleanVisibility}}" Padding="7" Margin="6,5,3,5">
+                  <Button Grid.Column="3" Command="{Binding DataContext.JoinCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding CanJoin, Converter={StaticResource BooleanVisibility}}" Padding="7" Margin="6,5,0,5">
                     <Image Source="{Binding MeetingService, Converter={StaticResource MeetingServiceIcon}}" Width="18" Height="18" Stretch="Uniform"/>
                   </Button>
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <ItemsControl ItemsSource="{Binding Bookmarks}" Margin="0,10,0,0">
+          <ItemsControl ItemsSource="{Binding Bookmarks}" Visibility="{Binding HasBookmarks, Converter={StaticResource BooleanVisibility}}" Margin="0,10,0,0">
             <ItemsControl.Template><ControlTemplate><StackPanel><TextBlock Text="BOOKMARKS" Foreground="{StaticResource MutedBrush}" FontSize="10" FontWeight="SemiBold" Margin="2,3,2,7"/><ItemsPresenter/></StackPanel></ControlTemplate></ItemsControl.Template>
             <ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding Name}" HorizontalContentAlignment="Left" Command="{Binding DataContext.OpenBookmarkCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,0,4"/></DataTemplate></ItemsControl.ItemTemplate>
           </ItemsControl>

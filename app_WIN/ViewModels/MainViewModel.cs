@@ -27,6 +27,10 @@ namespace MeetingBar.Windows.ViewModels
         public Visibility LoadingVisibility => _isInitialLoading ? Visibility.Visible : Visibility.Collapsed;
         public bool HasEvents => Events.Count > 0;
         public bool HasBookmarks => Bookmarks.Count > 0;
+        public int TimelinePastHours => _settings.Current.PastMeetingHours;
+        public int TimelineFutureHours => _settings.Current.FutureMeetingHours;
+        public bool TimelineIncludesPastDay => _settings.Current.IncludePastDay;
+        public bool TimelineIncludesNextDay => _settings.Current.IncludeNextDay;
         public string Header => NextEvent?.IsCurrent == true ? "CURRENT MEETING" : "NEXT MEETING";
         public string NextTitle => NextEvent?.Title ?? "No upcoming meetings";
         public string NextMeta => NextEvent == null ? StatusText : NextEvent.TimeRange + "  •  " + (NextEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? NextEvent.Remaining : NextEvent.Countdown);
@@ -91,7 +95,7 @@ namespace MeetingBar.Windows.ViewModels
             Bookmarks.Clear(); foreach (var item in _settings.Current.Bookmarks) Bookmarks.Add(item);
             StatusText = _sync.Status.Message; RaiseComputed();
         }
-        private void RaiseComputed() { Raise(nameof(NextEvent)); Raise(nameof(Header)); Raise(nameof(NextTitle)); Raise(nameof(NextMeta)); Raise(nameof(WidgetTitle)); Raise(nameof(WidgetTime)); Raise(nameof(WidgetIconVisibility)); Raise(nameof(WidgetEventColor)); Raise(nameof(CanJoinNext)); Raise(nameof(CanOpenCalendar)); Raise(nameof(HasEvents)); Raise(nameof(HasBookmarks)); Raise(nameof(LoadingVisibility)); }
+        private void RaiseComputed() { Raise(nameof(NextEvent)); Raise(nameof(Header)); Raise(nameof(NextTitle)); Raise(nameof(NextMeta)); Raise(nameof(WidgetTitle)); Raise(nameof(WidgetTime)); Raise(nameof(WidgetIconVisibility)); Raise(nameof(WidgetEventColor)); Raise(nameof(CanJoinNext)); Raise(nameof(CanOpenCalendar)); Raise(nameof(HasEvents)); Raise(nameof(HasBookmarks)); Raise(nameof(TimelinePastHours)); Raise(nameof(TimelineFutureHours)); Raise(nameof(TimelineIncludesPastDay)); Raise(nameof(TimelineIncludesNextDay)); Raise(nameof(LoadingVisibility)); }
         public void RefreshSettings() { _isInitialLoading = true; RaiseComputed(); }
         public void Dispose() { _sync.Changed -= SyncChanged; _clock.Stop(); }
     }

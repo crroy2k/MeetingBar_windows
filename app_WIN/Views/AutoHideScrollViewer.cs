@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace MeetingBar.Windows.Views
@@ -17,12 +18,13 @@ namespace MeetingBar.Windows.Views
         private double _scrollFrom;
         private double _scrollTarget;
         private bool _scrollAnimating;
+        private bool _scrollBarVisible;
 
         public AutoHideScrollViewer()
         {
             _hideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1100) };
-            _hideTimer.Tick += (s, e) => { _hideTimer.Stop(); ScrollBarOpacity = 0; };
-            Unloaded += (s, e) => StopSmoothScroll();
+            _hideTimer.Tick += (s, e) => { _hideTimer.Stop(); SetScrollBarVisible(false); };
+            Unloaded += (s, e) => { StopSmoothScroll(); _hideTimer.Stop(); };
         }
 
         public double ScrollBarOpacity
@@ -55,7 +57,7 @@ namespace MeetingBar.Windows.Views
         }
         protected override void OnPreviewMouseDown(MouseButtonEventArgs e) { StopSmoothScroll(); base.OnPreviewMouseDown(e); }
         protected override void OnMouseEnter(MouseEventArgs e) { base.OnMouseEnter(e); ShowScrollBar(); }
-        protected override void OnMouseLeave(MouseEventArgs e) { base.OnMouseLeave(e); _hideTimer.Stop(); ScrollBarOpacity = 0; }
+        protected override void OnMouseLeave(MouseEventArgs e) { base.OnMouseLeave(e); _hideTimer.Stop(); SetScrollBarVisible(false); }
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
@@ -64,9 +66,24 @@ namespace MeetingBar.Windows.Views
 
         private void ShowScrollBar()
         {
-            ScrollBarOpacity = ScrollableHeight > 0 ? 0.88 : 0;
+            SetScrollBarVisible(ScrollableHeight > 0);
             _hideTimer.Stop();
             if (ScrollableHeight > 0) _hideTimer.Start();
+        }
+
+        private void SetScrollBarVisible(bool visible)
+        {
+            if (_scrollBarVisible == visible) return;
+            _scrollBarVisible = visible;
+            var animation = new DoubleAnimation
+            {
+                From = ScrollBarOpacity,
+                To = visible ? 0.88 : 0,
+                Duration = TimeSpan.FromMilliseconds(visible ? 110 : 190),
+                FillBehavior = FillBehavior.HoldEnd,
+                EasingFunction = new CubicEase { EasingMode = visible ? EasingMode.EaseOut : EasingMode.EaseIn }
+            };
+            BeginAnimation(ScrollBarOpacityProperty, animation, HandoffBehavior.SnapshotAndReplace);
         }
 
         private void SmoothScrollFrame(object sender, EventArgs e)
