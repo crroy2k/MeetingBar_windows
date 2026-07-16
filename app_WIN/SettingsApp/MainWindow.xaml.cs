@@ -19,7 +19,7 @@ public sealed partial class MainWindow : Window
     private string _page = "";
     private string _stateSignature = "";
 
-    private ComboBox? _widgetMode, _titleMode, _timeMode, _provider, _timelineDateFormat;
+    private ComboBox? _widgetMode, _titleMode, _timeMode, _provider, _timelineDateFormat, _mapProvider;
     private Slider? _widgetWidth;
     private NumberBox? _offsetX, _offsetY, _titleLength, _refreshMinutes, _notifyBefore, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours, _timelinePastDays, _timelineFutureDays;
     private TextBox? _widgetColor, _icsSources, _googleClientId, _browserPath, _browserArgs, _createUrl, _debugTitle, _debugColor;
@@ -317,6 +317,8 @@ public sealed partial class MainWindow : Window
         _browserPath = TextEntry(_settings.PreferredBrowserPath); AddCard("Preferred browser executable", "Leave blank to use the Windows default browser.", _browserPath);
         _browserArgs = TextEntry(_settings.PreferredBrowserArguments); AddCard("Browser arguments", "Use {url} where MeetingBar should insert the meeting link.", _browserArgs);
         _createUrl = TextEntry(_settings.CreateMeetingUrl); AddCard("Create meeting URL", "Opened by the Create meeting button.", _createUrl);
+        _mapProvider = Choice(new[] { "Google Maps", "Bing Maps", "OpenStreetMap" }, Math.Max(0, Array.IndexOf(new[] { "Google Maps", "Bing Maps", "OpenStreetMap" }, _settings.MapProvider)));
+        AddCard("Map provider", "Used by the event-details location button.", _mapProvider);
 
         var heading = new Grid { Margin = new Thickness(0, 24, 0, 9) };
         heading.ColumnDefinitions.Add(new ColumnDefinition()); heading.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -553,6 +555,7 @@ public sealed partial class MainWindow : Window
                 if (_browserPath != null) _settings.PreferredBrowserPath = _browserPath.Text.Trim();
                 if (_browserArgs != null) _settings.PreferredBrowserArguments = _browserArgs.Text;
                 if (_createUrl != null) _settings.CreateMeetingUrl = _createUrl.Text.Trim();
+                if (_mapProvider?.SelectedItem is string mapProvider) _settings.MapProvider = mapProvider;
                 _settings.Bookmarks = _bookmarkEditors.Select(x => new Bookmark { Name = x.Name.Text.Trim(), Url = x.Url.Text.Trim() })
                     .Where(x => !string.IsNullOrWhiteSpace(x.Name) && Uri.IsWellFormedUriString(x.Url, UriKind.Absolute)).ToList();
                 break;

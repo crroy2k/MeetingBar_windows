@@ -9,6 +9,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Shell;
 using System.Windows.Threading;
 using MeetingBar.Windows.Interop;
+using MeetingBar.Windows.Models;
 using MeetingBar.Windows.ViewModels;
 
 namespace MeetingBar.Windows.Views
@@ -24,6 +25,12 @@ namespace MeetingBar.Windows.Views
         private bool _isOpen;
         private double _restingTop;
         private int _pageTransitionVersion;
+        private readonly DispatcherTimer _detailsOpenTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
+        private readonly DispatcherTimer _detailsCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(260) };
+        private EventDetailsWindow _eventDetails;
+        private FrameworkElement _pendingEventRow;
+        private CalendarEvent _pendingEvent;
+        private bool _eventRowHovered;
 
         public bool IsOpen => _isOpen;
         public bool WasJustDismissed => DateTime.UtcNow - LastHiddenAtUtc < TimeSpan.FromMilliseconds(350);
@@ -43,6 +50,14 @@ namespace MeetingBar.Windows.Views
             });
             DataContext = viewModel;
             _openSettings = openSettings;
+            _detailsOpenTimer.Tick += (s, e) => { _detailsOpenTimer.Stop(); ShowPendingEventDetails(); };
+            _detailsCloseTimer.Tick += (s, e) =>
+            {
+                _detailsCloseTimer.Stop();
+                if (_eventRowHovered || _eventDetails?.IsMouseOver == true) return;
+                HideEventDetails();
+                if (!IsActive && !IsMouseOver && _isOpen && !_isAnimating) HideAnimated();
+            };
             SourceInitialized += Window_SourceInitialized;
             PreviewKeyDown += (s, e) => { if (e.Key == Key.Escape) HideAnimated(); };
         }
@@ -89,6 +104,7 @@ namespace MeetingBar.Windows.Views
         public async void HideAnimated()
         {
             if (!_isOpen || _isClosing || _isAnimating) return;
+            HideEventDetails();
             _isClosing = true;
             _isAnimating = true;
             NativeMethods.RECT rect;
@@ -152,6 +168,7 @@ namespace MeetingBar.Windows.Views
 
         private async void Timeline_SelectedDayChanged(object sender, TimelineDayChangedEventArgs e)
         {
+            HideEventDetails();
             var version = ++_pageTransitionVersion;
             await AnimateEventPageAsync(-e.Direction * 28, 0, 85);
             if (version != _pageTransitionVersion) return;
@@ -189,10 +206,65 @@ namespace MeetingBar.Windows.Views
             EventPage.Opacity = 1;
         }
 
+        private void EventRow_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (!(sender is FrameworkElement row) || !(row.DataContext is CalendarEvent item)) return;
+            _eventRowHovered = true;
+            _pendingEventRow = row;
+            _pendingEvent = item;
+            _detailsCloseTimer.Stop();
+            if (_eventDetails?.IsVisible == true) ShowPendingEventDetails();
+            else { _detailsOpenTimer.Stop(); _detailsOpenTimer.Start(); }
+        }
+
+        private void EventRow_MouseLeave(object sender, MouseEventArgs e)
+        {
+            _eventRowHovered = false;
+            _detailsOpenTimer.Stop();
+            ScheduleEventDetailsClose();
+        }
+
+        private void ShowPendingEventDetails()
+        {
+            if (!_eventRowHovered || _pendingEventRow == null || _pendingEvent == null) return;
+            if (_eventDetails == null)
+            {
+                _eventDetails = new EventDetailsWindow(this, DataContext as MainViewModel);
+                _eventDetails.SubmenuEntered += (s, e) => _detailsCloseTimer.Stop();
+                _eventDetails.SubmenuLeft += (s, e) => ScheduleEventDetailsClose();
+                _eventDetails.ActionCompleted += (s, e) => { _eventRowHovered = false; HideEventDetails(); };
+                _eventDetails.Deactivated += (s, e) => ScheduleEventDetailsClose();
+            }
+            _eventDetails.ShowFor(_pendingEvent, _pendingEventRow);
+        }
+
+        private void ScheduleEventDetailsClose()
+        {
+            _detailsCloseTimer.Stop();
+            _detailsCloseTimer.Start();
+        }
+
+        private void HideEventDetails()
+        {
+            _detailsOpenTimer.Stop();
+            _detailsCloseTimer.Stop();
+            if (_eventDetails?.IsVisible == true) _eventDetails.Hide();
+            _eventRowHovered = false;
+            _pendingEventRow = null;
+            _pendingEvent = null;
+        }
+
         private void MoveWindow(int left, int top) => NativeMethods.SetWindowPos(_handle, IntPtr.Zero, left, top, 0, 0,
             NativeMethods.SwpNoSize | NativeMethods.SwpNoZOrder | NativeMethods.SwpNoActivate | NativeMethods.SwpNoSendChanging);
 
-        private void Window_Deactivated(object sender, EventArgs e) { if (_isOpen && !_isAnimating && !_isPreloading) HideAnimated(); }
+        private void Window_Deactivated(object sender, EventArgs e)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+            {
+                if (_eventDetails?.IsActive == true || _eventDetails?.IsMouseOver == true) return;
+                if (_isOpen && !_isAnimating && !_isPreloading) HideAnimated();
+            }));
+        }
         private void Settings_Click(object sender, RoutedEventArgs e) { HideAnimated(); _openSettings(); }
     }
 }

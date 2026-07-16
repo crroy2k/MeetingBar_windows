@@ -1,0 +1,75 @@
+<Window x:Class="MeetingBar.Windows.Views.EventDetailsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:MeetingBar.Windows.Views"
+        Title="Event details" Width="360" SizeToContent="Height" WindowStyle="None" ResizeMode="NoResize"
+        ShowInTaskbar="False" ShowActivated="False" AllowsTransparency="False" Background="Transparent"
+        MouseEnter="Window_MouseEnter" MouseLeave="Window_MouseLeave">
+  <Window.Resources>
+    <Style x:Key="DangerIconButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Background" Value="#22FF5A5F"/>
+      <Setter Property="BorderBrush" Value="#66FF5A5F"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="DangerSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="DangerSurface" Property="Background" Value="#55FF3B43"/>
+                <Setter TargetName="DangerSurface" Property="BorderBrush" Value="#AAFF5A5F"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="DangerSurface" Property="Background" Value="#88D92F36"/>
+                <Setter TargetName="DangerSurface" Property="BorderBrush" Value="#CCFF5A5F"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.38"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+  <Border x:Name="DetailsSurface" Background="#44202020" BorderBrush="#66767676" BorderThickness="1" CornerRadius="8" Padding="16" SnapsToDevicePixels="True">
+    <Grid>
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="4"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <Border Background="{Binding CalendarColor}" CornerRadius="2" Margin="0,1,0,1"/>
+        <StackPanel Grid.Column="1" Margin="12,0,0,0">
+          <views:EmojiTextBlock EmojiText="{Binding Title}" Style="{StaticResource EmojiText}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
+          <TextBlock x:Name="SummaryText" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,5,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+      </Grid>
+
+      <views:AutoHideScrollViewer x:Name="DetailsScroll" Grid.Row="1" Margin="0,14,0,14">
+        <Grid x:Name="DetailsRows"/>
+      </views:AutoHideScrollViewer>
+
+      <Grid Grid.Row="2">
+        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel Orientation="Horizontal">
+          <Button x:Name="JoinButton" Click="Join_Click" Padding="8" Margin="0,0,7,0" AutomationProperties.Name="Join meeting">
+            <Grid Width="17" Height="17">
+              <Image Source="{Binding MeetingService, Converter={StaticResource MeetingServiceIcon}}" Stretch="Uniform"/>
+              <views:LucideIcon Kind="Video" Stroke="White" Visibility="{Binding MeetingService, Converter={StaticResource UnknownMeetingServiceVisibility}}"/>
+            </Grid>
+          </Button>
+          <Button x:Name="OpenLocationButton" Click="OpenLocation_Click" Padding="8" Margin="0,0,7,0" AutomationProperties.Name="Open location">
+            <views:LucideIcon Kind="Map" Stroke="{StaticResource InkBrush}" Width="17" Height="17"/>
+          </Button>
+          <Button x:Name="CopyLinkButton" Click="CopyLink_Click" Padding="8" Margin="0,0,7,0" AutomationProperties.Name="Copy meeting link">
+            <views:LucideIcon Kind="Copy" Stroke="{StaticResource InkBrush}" Width="17" Height="17"/>
+          </Button>
+          <Button x:Name="OpenCalendarButton" Click="OpenCalendar_Click" Padding="8" AutomationProperties.Name="Open in calendar">
+            <views:LucideIcon Kind="ExternalLink" Stroke="{StaticResource InkBrush}" Width="17" Height="17"/>
+          </Button>
+        </StackPanel>
+        <Button Grid.Column="1" Style="{StaticResource DangerIconButton}" Click="Dismiss_Click" Padding="8" AutomationProperties.Name="Dismiss meeting">
+          <views:LucideIcon Kind="CircleX" Stroke="#FFFF5A5F" Width="17" Height="17"/>
+        </Button>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>

@@ -70,6 +70,7 @@ public sealed class AppSettings
     public string CreateMeetingUrl { get; set; } = "https://meet.google.com/new";
     public string PreferredBrowserPath { get; set; } = "";
     public string PreferredBrowserArguments { get; set; } = "";
+    public string MapProvider { get; set; } = "Google Maps";
 }
 
 public sealed class CalendarState

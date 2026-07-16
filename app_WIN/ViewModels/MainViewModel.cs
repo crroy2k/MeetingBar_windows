@@ -63,6 +63,9 @@ namespace MeetingBar.Windows.ViewModels
         public bool CanJoinNext => NextEvent?.CanJoin == true;
         public ICommand JoinCommand { get; }
         public ICommand OpenEventCommand { get; }
+        public ICommand OpenMapCommand { get; }
+        public ICommand CopyMeetingLinkCommand { get; }
+        public ICommand DismissEventCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand CreateMeetingCommand { get; }
         public ICommand OpenCalendarCommand { get; }
@@ -72,7 +75,10 @@ namespace MeetingBar.Windows.ViewModels
         {
             _sync = sync; _settings = settings; _opener = opener;
             JoinCommand = new RelayCommand(x => _opener.Open(x as CalendarEvent ?? NextEvent));
-            OpenEventCommand = new RelayCommand(x => { var item = x as CalendarEvent; var url = item?.CalendarOpenUrl ?? item?.EventUrl; if (!string.IsNullOrWhiteSpace(url)) _opener.Open(url); });
+            OpenEventCommand = new RelayCommand(OpenEventInCalendar, CanOpenEventInCalendar);
+            OpenMapCommand = new RelayCommand(x => { var item = x as CalendarEvent; _opener.Open(MapLinkService.BuildUrl(_settings.Current.MapProvider, item?.Location)); }, x => MapLinkService.HasPhysicalLocation((x as CalendarEvent)?.Location));
+            CopyMeetingLinkCommand = new RelayCommand(x => { var item = x as CalendarEvent; if (item?.CanJoin == true) try { Clipboard.SetText(item.MeetingUrl); } catch { } }, x => (x as CalendarEvent)?.CanJoin == true);
+            DismissEventCommand = new RelayCommand(x => _sync.DismissEvent(x as CalendarEvent), x => x is CalendarEvent);
             RefreshCommand = new RelayCommand(async () => await Refresh());
             CreateMeetingCommand = new RelayCommand(() => _opener.Open(_settings.Current.CreateMeetingUrl));
             OpenCalendarCommand = new RelayCommand(OpenCalendar, () => CanOpenCalendar);
@@ -94,6 +100,22 @@ namespace MeetingBar.Windows.ViewModels
                     break;
                 default: _opener.Open(NextEvent?.CalendarOpenUrl); break;
             }
+        }
+
+        private bool CanOpenEventInCalendar(object value)
+        {
+            var item = value as CalendarEvent;
+            return item != null && (!string.IsNullOrWhiteSpace(item.CalendarOpenUrl) || !string.IsNullOrWhiteSpace(item.EventUrl) || _settings.Current.Provider != CalendarProviderKind.Ics);
+        }
+
+        private void OpenEventInCalendar(object value)
+        {
+            var item = value as CalendarEvent;
+            if (item == null) return;
+            var url = item.CalendarOpenUrl ?? item.EventUrl;
+            if (!string.IsNullOrWhiteSpace(url)) { _opener.Open(url); return; }
+            if (_settings.Current.Provider == CalendarProviderKind.Outlook) _opener.Open("outlookcal:");
+            else if (_settings.Current.Provider == CalendarProviderKind.Google) _opener.Open("https://calendar.google.com/calendar/u/0/r");
         }
 
         private async Task Refresh() { IsRefreshing = true; await _sync.RefreshAsync(); IsRefreshing = false; }

@@ -64,17 +64,25 @@ namespace MeetingBar.Windows.Models
                 if (IsCurrent) return "Now";
                 if (IsPast)
                 {
-                    var elapsed = DateTime.Now - End;
-                    if (elapsed.TotalMinutes < 1) return "Just ended";
-                    if (elapsed.TotalHours < 1) return "Ended " + Math.Floor(elapsed.TotalMinutes) + "m ago";
-                    if (elapsed.TotalDays < 1) return "Ended " + Math.Floor(elapsed.TotalHours) + "h " + elapsed.Minutes + "m ago";
-                    return "Ended " + Math.Floor(elapsed.TotalDays) + "d ago";
+                    return "Ended";
                 }
                 var span = Start - DateTime.Now;
                 if (span.TotalMinutes < 1) return "Soon";
                 if (span.TotalHours < 1) return "in " + Math.Ceiling(span.TotalMinutes) + "m";
                 if (span.TotalDays < 1) return "in " + Math.Floor(span.TotalHours) + "h " + span.Minutes + "m";
                 return "in " + Math.Floor(span.TotalDays) + "d";
+            }
+        }
+        public string DetailedCountdown
+        {
+            get
+            {
+                if (!IsPast) return Countdown;
+                var elapsed = DateTime.Now - End;
+                if (elapsed.TotalMinutes < 1) return "Just ended";
+                if (elapsed.TotalHours < 1) return "Ended " + Math.Floor(elapsed.TotalMinutes) + "m ago";
+                if (elapsed.TotalDays < 1) return "Ended " + Math.Floor(elapsed.TotalHours) + "h " + elapsed.Minutes + "m ago";
+                return "Ended " + Math.Floor(elapsed.TotalDays) + "d ago";
             }
         }
         public string Remaining

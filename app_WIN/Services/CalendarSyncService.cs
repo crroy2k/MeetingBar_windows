@@ -122,6 +122,19 @@ namespace MeetingBar.Windows.Services
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
+        public void DismissEvent(CalendarEvent item)
+        {
+            if (item == null || string.IsNullOrWhiteSpace(item.Id)) return;
+            if (!_settings.Current.DismissedEventIds.Contains(item.Id))
+            {
+                _settings.Current.DismissedEventIds.Add(item.Id);
+                _settings.Save();
+            }
+            item.IsDismissed = true;
+            RebuildViews();
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
         public GoogleCalendarProvider Google => _google;
         public void Dispose() => _timer?.Dispose();
     }

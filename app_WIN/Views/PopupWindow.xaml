@@ -37,24 +37,8 @@
                   <TextBlock Grid.Column="1" Text="{Binding DayLabel}" Foreground="{StaticResource MutedBrush}" FontSize="9" FontWeight="SemiBold" Margin="9,0"/>
                   <Border Grid.Column="2" Height="1" Background="#55707070" VerticalAlignment="Center"/>
                 </Grid>
-                <Grid x:Name="EventRow" Margin="1,0,0,4" Background="Transparent" ToolTipService.InitialShowDelay="320" ToolTipService.BetweenShowDelay="80" ToolTipService.ShowDuration="60000">
+                <Grid x:Name="EventRow" Margin="1,0,0,4" Background="Transparent" MouseEnter="EventRow_MouseEnter" MouseLeave="EventRow_MouseLeave">
                   <Grid.Style><Style TargetType="Grid"><Setter Property="Opacity" Value="1"/><Style.Triggers><DataTrigger Binding="{Binding IsPast}" Value="True"><Setter Property="Opacity" Value="0.42"/></DataTrigger></Style.Triggers></Style></Grid.Style>
-                  <Grid.ToolTip>
-                    <ToolTip Placement="Right" HorizontalOffset="10" Background="Transparent" BorderThickness="0" Padding="0" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                      <Border Background="#FF2B2B2B" BorderBrush="#FF666666" BorderThickness="1" CornerRadius="11" Padding="14" Width="290">
-                        <StackPanel>
-                          <views:EmojiTextBlock EmojiText="{Binding Title}" Style="{StaticResource EmojiText}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                          <StackPanel Orientation="Horizontal" Margin="0,5,0,10"><TextBlock Text="{Binding TimeRange}" Foreground="{StaticResource MutedBrush}"/><TextBlock Text="  ·  "/><TextBlock Text="{Binding Countdown}" Foreground="{StaticResource MutedBrush}"/></StackPanel>
-                          <Separator Background="#66707070" Margin="0,0,0,9"/>
-                          <TextBlock Text="{Binding CalendarDetails}" Margin="0,0,0,4"/>
-                          <TextBlock Text="{Binding OrganizerDetails}" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4" TextWrapping="Wrap"/>
-                          <TextBlock Text="{Binding LocationDetails}" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4" TextWrapping="Wrap"/>
-                          <TextBlock Text="{Binding MeetingDetails}" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
-                          <TextBlock Text="{Binding DetailsNotes}" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" MaxHeight="150" Margin="0,5,0,0"/>
-                        </StackPanel>
-                      </Border>
-                    </ToolTip>
-                  </Grid.ToolTip>
                   <Grid.ColumnDefinitions><ColumnDefinition Width="4"/><ColumnDefinition Width="72"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                   <Border Background="{Binding CalendarColor}" CornerRadius="2" Margin="0,4"/>
                   <StackPanel Grid.Column="1" Margin="10,8,4,8">

@@ -51,7 +51,7 @@ namespace MeetingBar.Tests
             {
                 var current = new CalendarEvent { Start = DateTime.Now.AddMinutes(-10), End = DateTime.Now.AddMinutes(25) };
                 var past = new CalendarEvent { Start = DateTime.Now.AddHours(-2), End = DateTime.Now.AddMinutes(-20) };
-                Contains("left", current.Remaining); Contains("Ended", past.Countdown);
+                Contains("left", current.Remaining); Equal("Ended", past.Countdown); Contains("ago", past.DetailedCountdown);
             });
             Test("event window hours respect day-boundary toggles", () =>
             {
@@ -113,6 +113,13 @@ namespace MeetingBar.Tests
             {
                 Equal(true, MeetingServiceIconConverter.IsKnown("Google Meet"));
                 Equal(false, MeetingServiceIconConverter.IsKnown("Web meeting"));
+            });
+            Test("physical locations open in the configured map provider", () =>
+            {
+                Equal(true, MapLinkService.HasPhysicalLocation("Alexanderplatz 1, Berlin"));
+                Equal(false, MapLinkService.HasPhysicalLocation("https://meet.google.com/abc-defg-hij"));
+                Contains("google.com/maps", MapLinkService.BuildUrl("Google Maps", "Alexanderplatz 1, Berlin"));
+                Contains("openstreetmap.org", MapLinkService.BuildUrl("OpenStreetMap", "Alexanderplatz 1, Berlin"));
             });
             Test("debug events carry provider icon data without calendar writes", () =>
             {
