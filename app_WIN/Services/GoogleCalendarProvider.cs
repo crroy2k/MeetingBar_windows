@@ -1,0 +1,141 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Script.Serialization;
+using MeetingBar.Windows.Models;
+
+namespace MeetingBar.Windows.Services
+{
+    public sealed class GoogleCalendarProvider
+    {
+        private const string Scope = "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.email";
+        private readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        private readonly JavaScriptSerializer _json = new JavaScriptSerializer { MaxJsonLength = 20 * 1024 * 1024 };
+
+        public bool IsConnected(AppSettings settings) => !string.IsNullOrWhiteSpace(settings.GoogleRefreshTokenProtected);
+
+        public async Task ConnectAsync(AppSettings settings)
+        {
+            if (string.IsNullOrWhiteSpace(settings.GoogleClientId)) throw new InvalidOperationException("Enter a Google OAuth desktop client ID first.");
+            var verifier = Base64Url(RandomBytes(48));
+            string challenge;
+            using (var sha = SHA256.Create()) challenge = Base64Url(sha.ComputeHash(Encoding.ASCII.GetBytes(verifier)));
+            var state = Base64Url(RandomBytes(24));
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            try
+            {
+                var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                var redirect = "http://127.0.0.1:" + port + "/";
+                var auth = "https://accounts.google.com/o/oauth2/v2/auth?client_id=" + HttpUtility.UrlEncode(settings.GoogleClientId) + "&redirect_uri=" + HttpUtility.UrlEncode(redirect) + "&response_type=code&scope=" + HttpUtility.UrlEncode(Scope) + "&access_type=offline&prompt=consent&code_challenge=" + challenge + "&code_challenge_method=S256&state=" + HttpUtility.UrlEncode(state);
+                System.Diagnostics.Process.Start(auth);
+                var clientTask = listener.AcceptTcpClientAsync();
+                if (await Task.WhenAny(clientTask, Task.Delay(TimeSpan.FromMinutes(3))) != clientTask) throw new TimeoutException("Google sign-in timed out.");
+                string requestLine;
+                using (var client = clientTask.Result)
+                using (var stream = client.GetStream())
+                using (var reader = new StreamReader(stream, Encoding.ASCII, false, 1024, true))
+                {
+                    requestLine = await reader.ReadLineAsync();
+                    string header; do { header = await reader.ReadLineAsync(); } while (!string.IsNullOrEmpty(header));
+                    var html = "<html><body style='font-family:Segoe UI;background:#171b26;color:white;padding:40px'><h2>MeetingBar connected</h2><p>You can close this tab.</p></body></html>";
+                    var response = Encoding.UTF8.GetBytes(html);
+                    var responseHeader = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: " + response.Length + "\r\nConnection: close\r\n\r\n");
+                    await stream.WriteAsync(responseHeader, 0, responseHeader.Length); await stream.WriteAsync(response, 0, response.Length);
+                }
+                if (string.IsNullOrWhiteSpace(requestLine)) throw new InvalidOperationException("Google returned an empty callback.");
+                var target = requestLine.Split(' ')[1]; var query = HttpUtility.ParseQueryString(new Uri(redirect.TrimEnd('/') + target).Query);
+                if (!string.Equals(query["state"], state, StringComparison.Ordinal)) throw new InvalidOperationException("Google sign-in state validation failed.");
+                var code = query["code"];
+                if (string.IsNullOrWhiteSpace(code)) throw new InvalidOperationException("Google did not return an authorization code.");
+                var token = await PostForm("https://oauth2.googleapis.com/token", new Dictionary<string, string> { ["code"] = code, ["client_id"] = settings.GoogleClientId, ["client_secret"] = settings.GoogleClientSecret ?? "", ["redirect_uri"] = redirect, ["grant_type"] = "authorization_code", ["code_verifier"] = verifier });
+                var refresh = Value(token, "refresh_token");
+                if (string.IsNullOrWhiteSpace(refresh)) throw new InvalidOperationException("Google did not issue a refresh token.");
+                settings.GoogleRefreshTokenProtected = Protect(refresh);
+                settings.GoogleAccountEmail = await GetEmail(Value(token, "access_token"));
+            }
+            finally { listener.Stop(); }
+        }
+
+        public async Task<Tuple<List<CalendarInfo>, List<CalendarEvent>>> FetchAsync(AppSettings settings, DateTime from, DateTime to)
+        {
+            var access = await AccessToken(settings);
+            var calendarsJson = await GetJson("https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=250", access);
+            var calendars = Items(calendarsJson).Select(x => new CalendarInfo { Id = Value(x, "id"), Name = Value(x, "summary"), Source = "Google", Color = Value(x, "backgroundColor") ?? "#6D7CFF" }).ToList();
+            var events = new List<CalendarEvent>();
+            foreach (var calendar in calendars)
+            {
+                var url = "https://www.googleapis.com/calendar/v3/calendars/" + HttpUtility.UrlEncode(calendar.Id) + "/events?singleEvents=true&orderBy=startTime&maxResults=500&timeMin=" + HttpUtility.UrlEncode(from.ToUniversalTime().ToString("o")) + "&timeMax=" + HttpUtility.UrlEncode(to.ToUniversalTime().ToString("o"));
+                var data = await GetJson(url, access);
+                foreach (var raw in Items(data))
+                {
+                    var start = DateValue(raw, "start"); var end = DateValue(raw, "end");
+                    var attendees = raw.ContainsKey("attendees") ? raw["attendees"] as IEnumerable : null;
+                    var self = attendees?.Cast<object>().OfType<Dictionary<string, object>>().FirstOrDefault(x => BoolValue(x, "self"));
+                    var response = self == null ? null : Value(self, "responseStatus");
+                    var item = new CalendarEvent
+                    {
+                        Id = Value(raw, "id"), Title = Value(raw, "summary") ?? "Untitled event", Notes = Value(raw, "description"), Location = Value(raw, "location"),
+                        CalendarOpenUrl = Value(raw, "htmlLink"), ConferenceUrl = ConferenceUrl(raw) ?? Value(raw, "hangoutLink"), CalendarId = calendar.Id, CalendarName = calendar.Name,
+                        CalendarColor = Value(raw, "colorId") ?? calendar.Color, Organizer = NestedValue(raw, "organizer", "email"), Start = start, End = end,
+                        IsAllDay = NestedValue(raw, "start", "date") != null, IsDeclined = response == "declined", IsTentative = response == "tentative" || response == "needsAction",
+                        IsCancelled = Value(raw, "status") == "cancelled", IsBusy = Value(raw, "transparency") != "transparent"
+                    };
+                    events.Add(item);
+                }
+            }
+            return Tuple.Create(calendars, events.OrderBy(x => x.Start).ToList());
+        }
+
+        public void Disconnect(AppSettings settings) { settings.GoogleRefreshTokenProtected = ""; settings.GoogleAccountEmail = ""; }
+        private async Task<string> AccessToken(AppSettings s)
+        {
+            var token = await PostForm("https://oauth2.googleapis.com/token", new Dictionary<string, string> { ["client_id"] = s.GoogleClientId, ["client_secret"] = s.GoogleClientSecret ?? "", ["refresh_token"] = Unprotect(s.GoogleRefreshTokenProtected), ["grant_type"] = "refresh_token" });
+            return Value(token, "access_token");
+        }
+        private async Task<Dictionary<string, object>> PostForm(string url, Dictionary<string, string> form)
+        {
+            var response = await _http.PostAsync(url, new FormUrlEncodedContent(form)); var body = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                string description = null;
+                try { description = Value(_json.Deserialize<Dictionary<string, object>>(body), "error_description"); } catch { }
+                throw new InvalidOperationException("Google OAuth error" + (string.IsNullOrWhiteSpace(description) ? "." : ": " + description));
+            }
+            return _json.Deserialize<Dictionary<string, object>>(body);
+        }
+        private async Task<Dictionary<string, object>> GetJson(string url, string token)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, url); request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var response = await _http.SendAsync(request); var body = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode) throw new InvalidOperationException("Google Calendar error: " + response.StatusCode);
+            return _json.Deserialize<Dictionary<string, object>>(body);
+        }
+        private async Task<string> GetEmail(string token) { var json = await GetJson("https://www.googleapis.com/oauth2/v2/userinfo", token); return Value(json, "email"); }
+        private static IEnumerable<Dictionary<string, object>> Items(Dictionary<string, object> x) => x.ContainsKey("items") ? ((IEnumerable)x["items"]).Cast<object>().OfType<Dictionary<string, object>>() : Enumerable.Empty<Dictionary<string, object>>();
+        private static string Value(Dictionary<string, object> x, string key) => x != null && x.ContainsKey(key) ? Convert.ToString(x[key]) : null;
+        private static bool BoolValue(Dictionary<string, object> x, string key) => x != null && x.ContainsKey(key) && Convert.ToBoolean(x[key]);
+        private static string NestedValue(Dictionary<string, object> x, string key, string nested) => x.ContainsKey(key) ? Value(x[key] as Dictionary<string, object>, nested) : null;
+        private static DateTime DateValue(Dictionary<string, object> x, string key) { var date = NestedValue(x, key, "dateTime") ?? NestedValue(x, key, "date"); DateTime parsed; return DateTime.TryParse(date, null, System.Globalization.DateTimeStyles.RoundtripKind, out parsed) ? parsed.ToLocalTime() : DateTime.MinValue; }
+        private static string ConferenceUrl(Dictionary<string, object> x)
+        {
+            if (!x.ContainsKey("conferenceData")) return null; var data = x["conferenceData"] as Dictionary<string, object>;
+            if (data == null || !data.ContainsKey("entryPoints")) return null;
+            return ((IEnumerable)data["entryPoints"]).Cast<object>().OfType<Dictionary<string, object>>().Where(y => Value(y, "entryPointType") == "video").Select(y => Value(y, "uri")).FirstOrDefault();
+        }
+        private static byte[] RandomBytes(int count) { var data = new byte[count]; using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(data); return data; }
+        private static string Base64Url(byte[] data) => Convert.ToBase64String(data).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        private static string Protect(string value) => Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(value), null, DataProtectionScope.CurrentUser));
+        private static string Unprotect(string value) => Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(value), null, DataProtectionScope.CurrentUser));
+    }
+}

@@ -1,0 +1,95 @@
+<Window x:Class="MeetingBar.Windows.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MeetingBar Settings" Width="720" Height="650" WindowStartupLocation="CenterScreen" Background="{StaticResource PanelBrush}">
+  <Grid Margin="22">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <StackPanel Margin="2,0,0,16"><TextBlock Text="MeetingBar settings" FontSize="24" FontWeight="SemiBold"/><TextBlock Text="Windows surfaces, calendars, meetings, and reminders" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/></StackPanel>
+    <TabControl Grid.Row="1" Background="{StaticResource PanelBrush}" BorderBrush="#FF343B50" Foreground="#FF171B26">
+      <TabItem Header="Widget">
+        <ScrollViewer><StackPanel Margin="20">
+          <TextBlock Text="TASKBAR SURFACE" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+          <TextBlock Text="Mode" Margin="0,14,0,4"/><ComboBox ItemsSource="{Binding WidgetModes}" SelectedItem="{Binding Settings.WidgetMode}"/>
+          <TextBlock Text="Tray only shows the icon. Taskbar modes use a borderless overlay because Windows has no supported third-party taskbar slot API." Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,8,0,16"/>
+          <TextBlock Text="Widget width"/><Slider Minimum="160" Maximum="600" Value="{Binding Settings.WidgetWidth}" TickFrequency="20" Margin="0,5,0,10"/>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <StackPanel><TextBlock Text="Horizontal offset"/><TextBox Text="{Binding Settings.WidgetOffsetX}" Margin="0,4,8,0"/></StackPanel>
+            <StackPanel Grid.Column="1"><TextBlock Text="Vertical offset"/><TextBox Text="{Binding Settings.WidgetOffsetY}" Margin="8,4,0,0"/></StackPanel>
+          </Grid>
+          <Separator Margin="0,20"/>
+          <TextBlock Text="DISPLAY" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+          <TextBlock Text="Title" Margin="0,14,0,4"/><ComboBox ItemsSource="{Binding TitleModes}" SelectedItem="{Binding Settings.TitleMode}"/>
+          <TextBlock Text="Time" Margin="0,12,0,4"/><ComboBox ItemsSource="{Binding TimeModes}" SelectedItem="{Binding Settings.TimeMode}"/>
+          <TextBlock Text="Maximum title length" Margin="0,12,0,4"/><TextBox Text="{Binding Settings.TitleMaxLength}"/>
+          <CheckBox Content="Show meeting service icon" IsChecked="{Binding Settings.ShowServiceIcon}" Margin="0,10,0,0"/>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Calendars">
+        <ScrollViewer><StackPanel Margin="20">
+          <TextBlock Text="CALENDAR PROVIDER" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+          <ComboBox ItemsSource="{Binding Providers}" SelectedItem="{Binding Settings.Provider}" Margin="0,12,0,14"/>
+          <TextBlock Text="Outlook reads Classic Outlook through its local COM API. ICS accepts one file path or URL per line." Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"/>
+          <TextBlock Text="ICS files / feed URLs" Margin="0,14,0,4"/><TextBox Text="{Binding Settings.IcsSources}" AcceptsReturn="True" Height="72" VerticalScrollBarVisibility="Auto"/>
+          <Separator Margin="0,20"/>
+          <TextBlock Text="GOOGLE CALENDAR" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+          <TextBlock Text="OAuth desktop client ID" Margin="0,12,0,4"/><TextBox Text="{Binding Settings.GoogleClientId}"/>
+          <TextBlock Text="Client secret (optional for PKCE clients)" Margin="0,10,0,4"/><TextBox Text="{Binding Settings.GoogleClientSecret}"/>
+          <StackPanel Orientation="Horizontal" Margin="0,10,0,0"><Button Content="Connect Google" Command="{Binding ConnectGoogleCommand}" Style="{StaticResource AccentButton}"/><Button Content="Disconnect" Command="{Binding DisconnectGoogleCommand}" Margin="8,0,0,0"/><TextBlock Text="{Binding ConnectionStatus}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="10,0,0,0"/></StackPanel>
+          <Separator Margin="0,20"/>
+          <TextBlock Text="VISIBLE CALENDARS" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+          <ItemsControl ItemsSource="{Binding Calendars}" Margin="0,9,0,0"><ItemsControl.ItemTemplate><DataTemplate><CheckBox Content="{Binding Name}" IsChecked="{Binding Selected}"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+          <TextBlock Text="Refresh once if this list is empty." Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0"/>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Events">
+        <ScrollViewer><StackPanel Margin="20">
+          <TextBlock Text="EVENT FILTERS" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+          <CheckBox Content="Show all-day events" IsChecked="{Binding Settings.ShowAllDayEvents}" Margin="0,12,0,0"/>
+          <CheckBox Content="Show declined events" IsChecked="{Binding Settings.ShowDeclinedEvents}"/>
+          <CheckBox Content="Show tentative and pending events" IsChecked="{Binding Settings.ShowTentativeEvents}"/>
+          <CheckBox Content="Show free / non-busy events" IsChecked="{Binding Settings.ShowFreeEvents}"/>
+          <CheckBox Content="Only show events containing a meeting link" IsChecked="{Binding Settings.RequireMeetingLink}"/>
+          <CheckBox Content="Include tomorrow" IsChecked="{Binding Settings.IncludeTomorrow}"/>
+          <TextBlock Text="Refresh interval in minutes" Margin="0,15,0,4"/><TextBox Text="{Binding Settings.RefreshMinutes}" Width="100" HorizontalAlignment="Left"/>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Meetings">
+        <ScrollViewer><StackPanel Margin="20">
+          <TextBlock Text="OPENING" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+          <TextBlock Text="Preferred browser executable (blank = Windows default)" Margin="0,12,0,4"/><TextBox Text="{Binding Settings.PreferredBrowserPath}"/>
+          <TextBlock Text="Browser arguments; use {url} as placeholder" Margin="0,10,0,4"/><TextBox Text="{Binding Settings.PreferredBrowserArguments}"/>
+          <TextBlock Text="Create meeting URL" Margin="0,10,0,4"/><TextBox Text="{Binding Settings.CreateMeetingUrl}"/>
+          <Separator Margin="0,20"/>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="BOOKMARKS" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/><Button Grid.Column="1" Content="Add" Command="{Binding AddBookmarkCommand}" Padding="10,4"/></Grid>
+          <ItemsControl ItemsSource="{Binding Bookmarks}" Margin="0,9,0,0"><ItemsControl.ItemTemplate><DataTemplate><Grid Margin="0,0,0,7"><Grid.ColumnDefinitions><ColumnDefinition Width="170"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox Text="{Binding Name}" Margin="0,0,6,0"/><TextBox Grid.Column="1" Text="{Binding Url}" Margin="0,0,6,0"/><Button Grid.Column="2" Content="Remove" Command="{Binding DataContext.RemoveBookmarkCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="9,5"/></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Reminders">
+        <ScrollViewer><StackPanel Margin="20">
+          <TextBlock Text="REMINDERS" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+          <CheckBox Content="Notify before meetings" IsChecked="{Binding Settings.NotifyBeforeMeeting}" Margin="0,12,0,0"/>
+          <TextBlock Text="Minutes before" Margin="0,7,0,4"/><TextBox Text="{Binding Settings.NotifyMinutesBefore}" Width="100" HorizontalAlignment="Left"/>
+          <CheckBox Content="Show full-screen reminder" IsChecked="{Binding Settings.FullscreenReminder}" Margin="0,8,0,0"/>
+          <CheckBox Content="Notify when meetings end" IsChecked="{Binding Settings.NotifyAtEnd}"/>
+          <Separator Margin="0,20"/>
+          <TextBlock Text="AUTOMATION" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+          <CheckBox Content="Automatically join meetings" IsChecked="{Binding Settings.AutoJoin}" Margin="0,12,0,0"/>
+          <TextBlock Text="Minutes before start" Margin="0,7,0,4"/><TextBox Text="{Binding Settings.AutoJoinMinutesBefore}" Width="100" HorizontalAlignment="Left"/>
+          <CheckBox Content="Ctrl+Alt+J joins the nearest meeting" IsChecked="{Binding Settings.GlobalJoinHotkey}" Margin="0,8,0,0"/>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="General">
+        <StackPanel Margin="20">
+          <TextBlock Text="GENERAL" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold"/>
+          <CheckBox Content="Start MeetingBar with Windows" IsChecked="{Binding Settings.StartWithWindows}" Margin="0,12,0,0"/>
+          <TextBlock Text="Meeting data stays on this PC. Google tokens are encrypted with Windows Data Protection for the current user." Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,18,0,0"/>
+        </StackPanel>
+      </TabItem>
+    </TabControl>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0"><Button Content="Cancel" Click="Cancel_Click"/><Button Content="Save" Command="{Binding SaveCommand}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource AccentButton}" Margin="8,0,0,0"/></StackPanel>
+  </Grid>
+</Window>

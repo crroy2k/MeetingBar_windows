@@ -1,0 +1,25 @@
+# MacOS generated files
+.DS_Store
+.DS_Store?
+
+# Development Team override
+XCConfig/DevTeamOverride.xcconfig
+
+# XCode generated files
+MeetingBar.xcodeproj/project.xcworkspace/xcuserdata/*
+MeetingBar.xcodeproj/xcuserdata/*
+MeetingBar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/*
+!MeetingBar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+
+Archive/*
+build
+
+# SwiftPM hostless test build artifacts (created by `make test-logic`)
+.build/
+.swiftpm/
+
+# AI agent local state
+.claude/
+.ignore
+AGENTS.md
+CLAUDE.md

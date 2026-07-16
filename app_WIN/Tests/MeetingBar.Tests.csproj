@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup><Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration><Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform><ProjectGuid>{1A292EDD-61B0-4139-B9DF-FBD4329C6B20}</ProjectGuid><OutputType>Exe</OutputType><RootNamespace>MeetingBar.Tests</RootNamespace><AssemblyName>MeetingBar.Tests</AssemblyName><TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion><LangVersion>latest</LangVersion><OutputPath>bin\$(Configuration)\</OutputPath></PropertyGroup>
+  <ItemGroup><Reference Include="System"/><Reference Include="System.Core"/></ItemGroup>
+  <ItemGroup><ProjectReference Include="..\MeetingBar.Windows.csproj"><Project>{B8E1DD23-C58D-4E46-8143-FA5BB498094D}</Project><Name>MeetingBar.Windows</Name></ProjectReference></ItemGroup>
+  <ItemGroup><Compile Include="Program.cs"/></ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
