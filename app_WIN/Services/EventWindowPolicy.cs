@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using MeetingBar.Windows.Models;
 
 namespace MeetingBar.Windows.Services
@@ -21,5 +23,31 @@ namespace MeetingBar.Windows.Services
             if (end <= start) end = start.AddHours(1);
             return Tuple.Create(start, end);
         }
+
+        public static Tuple<DateTime, DateTime> FullDayRange(bool includePastDay, bool includeNextDay, DateTime now)
+            => FullDayRange(includePastDay ? 1 : 0, includeNextDay ? 1 : 0, now);
+
+        public static Tuple<DateTime, DateTime> FullDayRange(int pastDays, int futureDays, DateTime now)
+        {
+            var start = now.Date.AddDays(-Math.Max(0, Math.Min(30, pastDays)));
+            var end = now.Date.AddDays(Math.Max(0, Math.Min(30, futureDays)) + 1);
+            return Tuple.Create(start, end);
+        }
+
+        public static IReadOnlyList<CalendarEvent> Page(IEnumerable<CalendarEvent> events, AppSettings settings, int dayOffset, DateTime now)
+        {
+            var dayStart = now.Date.AddDays(dayOffset);
+            var dayEnd = dayStart.AddDays(1);
+            var window = Range(settings, now);
+            return (events ?? Enumerable.Empty<CalendarEvent>())
+                .Where(item => dayOffset == 0
+                    ? (settings.ShowFullDayEventList && item.End > dayStart && item.Start < dayEnd)
+                      || item.End > window.Item1 && item.Start < window.Item2
+                    : item.End > dayStart && item.Start < dayEnd)
+                .OrderBy(item => item.Start).ThenBy(item => item.End).ToList();
+        }
+
+        public static CalendarEvent NextTaskbarEvent(IEnumerable<CalendarEvent> events, bool ignoreFreeEvents, DateTime now) =>
+            (events ?? Enumerable.Empty<CalendarEvent>()).FirstOrDefault(item => item.End > now && (!ignoreFreeEvents || item.IsBusy));
     }
 }

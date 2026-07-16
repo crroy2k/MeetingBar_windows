@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.ComponentModel;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -29,13 +30,28 @@ namespace MeetingBar.Windows.Models
         public string MeetingUrl { get; set; }
         public string MeetingService { get; set; }
         public bool IsDismissed { get; set; }
+        public bool Use24HourClock { get; set; } = true;
+        public bool ShowDayDivider { get; set; }
 
         public bool IsCurrent => Start <= DateTime.Now && End > DateTime.Now;
         public bool IsPast => End <= DateTime.Now;
         public bool CanJoin => !string.IsNullOrWhiteSpace(MeetingUrl);
         public bool CanOpenDetails => !string.IsNullOrWhiteSpace(CalendarOpenUrl);
-        public string TimeRange => IsAllDay ? "All day" : Start.ToString("t") + " – " + End.ToString("t");
+        public string StartTimeText => FormatTime(Start, Use24HourClock);
+        public string TimeRange => IsAllDay ? "All day" : FormatTime(Start, Use24HourClock) + " – " + FormatTime(End, Use24HourClock);
         public string DayLabel => Start.Date == DateTime.Today ? "TODAY" : Start.Date == DateTime.Today.AddDays(1) ? "TOMORROW" : Start.ToString("ddd, d MMM").ToUpperInvariant();
+        public static string FormatTime(DateTime value, bool use24HourClock, bool hourOnly = false) => value.ToString(
+            use24HourClock ? (hourOnly ? "HH" : "HH:mm") : (hourOnly ? "h tt" : "h:mm tt"),
+            use24HourClock ? CultureInfo.CurrentCulture : CultureInfo.InvariantCulture);
+        public static string FormatDate(DateTime value, string format)
+        {
+            switch (format)
+            {
+                case "MM/dd/yyyy": case "dd/MM/yyyy": case "yyyy-MM-dd": case "dd MMM yyyy": break;
+                default: format = "dd.MM.yyyy"; break;
+            }
+            return value.ToString(format, CultureInfo.CurrentCulture);
+        }
         public string CalendarDetails => string.IsNullOrWhiteSpace(CalendarName) ? null : "Calendar  ·  " + CalendarName;
         public string OrganizerDetails => string.IsNullOrWhiteSpace(Organizer) ? null : "Organizer  ·  " + Organizer;
         public string LocationDetails => string.IsNullOrWhiteSpace(Location) ? null : "Location  ·  " + Location;

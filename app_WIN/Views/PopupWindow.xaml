@@ -8,11 +8,8 @@
     <Grid>
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
 
-      <Border Grid.Row="0" Background="#66202020" CornerRadius="9" Padding="10,7,10,8" Margin="0,0,0,12">
-        <StackPanel>
-          <TextBlock Text="TIMELINE" Foreground="{StaticResource MutedBrush}" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,5"/>
-          <views:DayTimelineControl Events="{Binding Events}" PastHours="{Binding TimelinePastHours}" FutureHours="{Binding TimelineFutureHours}" IncludePastDay="{Binding TimelineIncludesPastDay}" IncludeNextDay="{Binding TimelineIncludesNextDay}" Height="62" AutomationProperties.Name="Event timeline"/>
-        </StackPanel>
+      <Border Grid.Row="0" Background="#66202020" CornerRadius="9" Padding="10,8,10,7" Margin="0,0,0,12">
+        <views:DayTimelineControl x:Name="TimelineControl" Events="{Binding TimelineEvents}" PastHours="{Binding TimelinePastHours}" FutureHours="{Binding TimelineFutureHours}" IncludePastDay="{Binding TimelineIncludesPastDay}" IncludeNextDay="{Binding TimelineIncludesNextDay}" PastDays="{Binding TimelinePastDays}" FutureDays="{Binding TimelineFutureDays}" Use24HourClock="{Binding Use24HourClock}" ShowTimelineDate="{Binding ShowTimelineDate}" TimelineDateFormat="{Binding TimelineDateFormat}" SelectedDayChanged="Timeline_SelectedDayChanged" Height="76" AutomationProperties.Name="Event timeline" AutomationProperties.HelpText="Scroll to scrub time; click to return to today."/>
       </Border>
 
       <Border Grid.Row="1" Background="{StaticResource PanelRaisedBrush}" CornerRadius="11" Padding="15" Margin="0,0,0,14">
@@ -22,16 +19,24 @@
           <views:EmojiTextBlock Grid.Row="1" EmojiText="{Binding NextTitle}" Style="{StaticResource EmojiText}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,6,0,0"/>
           <TextBlock Grid.Row="2" Text="{Binding NextMeta}" Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0"/>
           <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,13,0,0">
-            <Button Command="{Binding JoinCommand}" IsEnabled="{Binding CanJoinNext}" Style="{StaticResource AccentButton}"><StackPanel Orientation="Horizontal"><Image Source="{Binding NextEvent.MeetingService, Converter={StaticResource MeetingServiceIcon}}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,7,0"/><TextBlock Text="Join meeting"/></StackPanel></Button>
+            <Button Command="{Binding JoinCommand}" IsEnabled="{Binding CanJoinNext}" Style="{StaticResource AccentButton}"><StackPanel Orientation="Horizontal"><Grid Width="16" Height="16" Margin="0,0,7,0"><Image Source="{Binding NextEvent.MeetingService, Converter={StaticResource MeetingServiceIcon}}" Stretch="Uniform"/><views:LucideIcon Kind="Video" Stroke="White" Visibility="{Binding NextEvent.MeetingService, Converter={StaticResource UnknownMeetingServiceVisibility}}"/></Grid><TextBlock Text="Join meeting"/></StackPanel></Button>
           </StackPanel>
         </Grid>
       </Border>
 
-      <views:AutoHideScrollViewer Grid.Row="2">
+      <views:AutoHideScrollViewer x:Name="EventScroller" Grid.Row="2">
         <StackPanel>
-          <ItemsControl ItemsSource="{Binding Events}">
+          <ItemsControl x:Name="EventPage" ItemsSource="{Binding PageEvents}" RenderTransformOrigin="0.5,0.5">
+            <ItemsControl.RenderTransform><TranslateTransform x:Name="EventPageTranslate"/></ItemsControl.RenderTransform>
             <ItemsControl.ItemTemplate>
               <DataTemplate>
+                <StackPanel>
+                <Grid Visibility="{Binding ShowDayDivider, Converter={StaticResource BooleanVisibility}}" Margin="1,8,0,7">
+                  <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <Border Height="1" Background="#55707070" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1" Text="{Binding DayLabel}" Foreground="{StaticResource MutedBrush}" FontSize="9" FontWeight="SemiBold" Margin="9,0"/>
+                  <Border Grid.Column="2" Height="1" Background="#55707070" VerticalAlignment="Center"/>
+                </Grid>
                 <Grid x:Name="EventRow" Margin="1,0,0,4" Background="Transparent" ToolTipService.InitialShowDelay="320" ToolTipService.BetweenShowDelay="80" ToolTipService.ShowDuration="60000">
                   <Grid.Style><Style TargetType="Grid"><Setter Property="Opacity" Value="1"/><Style.Triggers><DataTrigger Binding="{Binding IsPast}" Value="True"><Setter Property="Opacity" Value="0.42"/></DataTrigger></Style.Triggers></Style></Grid.Style>
                   <Grid.ToolTip>
@@ -53,7 +58,7 @@
                   <Grid.ColumnDefinitions><ColumnDefinition Width="4"/><ColumnDefinition Width="72"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                   <Border Background="{Binding CalendarColor}" CornerRadius="2" Margin="0,4"/>
                   <StackPanel Grid.Column="1" Margin="10,8,4,8">
-                    <TextBlock Text="{Binding Start, StringFormat={}{0:t}}" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding StartTimeText}" FontWeight="SemiBold"/>
                     <TextBlock Text="{Binding Countdown}" Foreground="{StaticResource MutedBrush}" FontSize="11"/>
                   </StackPanel>
                   <StackPanel Grid.Column="2" Margin="4,8">
@@ -61,9 +66,10 @@
                     <TextBlock Text="{Binding CalendarName}" Foreground="{StaticResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                   </StackPanel>
                   <Button Grid.Column="3" Command="{Binding DataContext.JoinCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding CanJoin, Converter={StaticResource BooleanVisibility}}" Padding="7" Margin="6,5,0,5">
-                    <Image Source="{Binding MeetingService, Converter={StaticResource MeetingServiceIcon}}" Width="18" Height="18" Stretch="Uniform"/>
+                    <Grid Width="18" Height="18"><Image Source="{Binding MeetingService, Converter={StaticResource MeetingServiceIcon}}" Stretch="Uniform"/><views:LucideIcon Kind="Video" Stroke="{StaticResource InkBrush}" Visibility="{Binding MeetingService, Converter={StaticResource UnknownMeetingServiceVisibility}}"/></Grid>
                   </Button>
                 </Grid>
+                </StackPanel>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>

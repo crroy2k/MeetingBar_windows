@@ -19,6 +19,7 @@ namespace MeetingBar.Windows.Services
         private readonly List<CalendarEvent> _debugEvents = new List<CalendarEvent>();
 
         public IReadOnlyList<CalendarEvent> Events { get; private set; } = new List<CalendarEvent>();
+        public IReadOnlyList<CalendarEvent> TimelineEvents { get; private set; } = new List<CalendarEvent>();
         public IReadOnlyList<CalendarInfo> Calendars { get; private set; } = new List<CalendarInfo>();
         public ProviderStatus Status { get; private set; } = new ProviderStatus { Provider = "Calendar", Message = "Starting…" };
         public event EventHandler Changed;
@@ -37,9 +38,9 @@ namespace MeetingBar.Windows.Services
             try
             {
                 var now = DateTime.Now;
-                var range = EventWindowPolicy.Range(_settings.Current, now);
-                var from = range.Item1;
-                var to = range.Item2;
+                var fetchRange = TimelineDayRange(_settings.Current, now);
+                var from = fetchRange.Item1;
+                var to = fetchRange.Item2;
                 Tuple<List<CalendarInfo>, List<CalendarEvent>> result;
                 switch (_settings.Current.Provider)
                 {
@@ -56,27 +57,43 @@ namespace MeetingBar.Windows.Services
                 var activeIds = new HashSet<string>(result.Item2.Where(x => x.End > now).Select(x => x.Id));
                 if (_settings.Current.DismissedEventIds.RemoveAll(id => !activeIds.Contains(id)) > 0) _settings.Save();
                 Calendars = result.Item1;
-                _lastGoodEvents = Filter(result.Item2).ToList();
-                Events = Filter(_lastGoodEvents.Concat(_debugEvents)).ToList();
+                _lastGoodEvents = result.Item2.ToList();
+                RebuildViews();
                 Status = new ProviderStatus { Provider = _settings.Current.Provider.ToString(), IsHealthy = true, Message = "Updated " + DateTime.Now.ToString("t") };
                 AppLog.Info("Calendar refresh succeeded: provider=" + _settings.Current.Provider + ", calendars=" + Calendars.Count + ", visibleEvents=" + Events.Count);
             }
             catch (Exception ex)
             {
-                Events = Filter(_lastGoodEvents.Concat(_debugEvents)).ToList();
+                RebuildViews();
                 Status = new ProviderStatus { Provider = _settings.Current.Provider.ToString(), IsHealthy = false, Message = ex.Message };
                 AppLog.Error("Calendar refresh", ex);
             }
             finally { Interlocked.Exchange(ref _refreshing, 0); Changed?.Invoke(this, EventArgs.Empty); }
         }
 
-        private IEnumerable<CalendarEvent> Filter(IEnumerable<CalendarEvent> events)
+        private void RebuildViews()
         {
             var s = _settings.Current;
-            var range = EventWindowPolicy.Range(s, DateTime.Now);
+            var now = DateTime.Now;
+            var dayRange = TimelineDayRange(s, now);
+            var dayStart = dayRange.Item1;
+            var dayEnd = dayRange.Item2;
+            var all = FilterGeneral(_lastGoodEvents.Concat(_debugEvents)).ToList();
+            TimelineEvents = all.Where(item => item.End > dayStart && item.Start < dayEnd).ToList();
+            var listRange = s.ShowFullDayEventList ? Tuple.Create(dayStart, dayEnd) : EventWindowPolicy.Range(s, now);
+            Events = all.Where(item => item.End > listRange.Item1 && item.Start < listRange.Item2).ToList();
+        }
+
+        private static Tuple<DateTime, DateTime> TimelineDayRange(AppSettings settings, DateTime now) => EventWindowPolicy.FullDayRange(
+            settings.IncludePastDay ? settings.TimelinePastDays : 0,
+            settings.IncludeNextDay ? settings.TimelineFutureDays : 0,
+            now);
+
+        private IEnumerable<CalendarEvent> FilterGeneral(IEnumerable<CalendarEvent> events)
+        {
+            var s = _settings.Current;
             foreach (var item in events.OrderBy(x => x.Start))
             {
-                if (item.End <= range.Item1 || item.Start >= range.Item2) continue;
                 if (item.IsCancelled || item.IsDismissed) continue;
                 if (!s.ShowAllDayEvents && item.IsAllDay) continue;
                 if (!s.ShowDeclinedEvents && item.IsDeclined) continue;
@@ -85,6 +102,7 @@ namespace MeetingBar.Windows.Services
                 if (s.RequireMeetingLink && !item.CanJoin) continue;
                 if (item.CalendarId != "meetingbar-debug" && s.SelectedCalendarIds.Count > 0 && !s.SelectedCalendarIds.Contains(item.CalendarId)) continue;
                 if (s.HiddenTitlePatterns.Any(p => !string.IsNullOrWhiteSpace(p) && System.Text.RegularExpressions.Regex.IsMatch(item.Title ?? "", p, System.Text.RegularExpressions.RegexOptions.IgnoreCase))) continue;
+                item.Use24HourClock = s.Use24HourClock;
                 yield return item;
             }
         }
@@ -94,13 +112,13 @@ namespace MeetingBar.Windows.Services
         {
             if (item == null) return;
             _debugEvents.Add(item);
-            Events = Filter(_lastGoodEvents.Concat(_debugEvents)).ToList();
+            RebuildViews();
             Changed?.Invoke(this, EventArgs.Empty);
         }
         public void ClearDebugEvents()
         {
             _debugEvents.Clear();
-            Events = Filter(_lastGoodEvents).ToList();
+            RebuildViews();
             Changed?.Invoke(this, EventArgs.Empty);
         }
 

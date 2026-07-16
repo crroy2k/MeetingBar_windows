@@ -61,6 +61,59 @@ namespace MeetingBar.Tests
                 var expanded = EventWindowPolicy.Range(24, 24, true, true, now);
                 Equal(now.AddHours(-24), expanded.Item1); Equal(now.AddHours(24), expanded.Item2);
             });
+            Test("full-day event range ignores timeline hours", () =>
+            {
+                var now = new DateTime(2026, 7, 16, 10, 0, 0);
+                var range = EventWindowPolicy.FullDayRange(true, true, now);
+                Equal(new DateTime(2026, 7, 15), range.Item1); Equal(new DateTime(2026, 7, 18), range.Item2);
+            });
+            Test("timeline day range supports configurable depth", () =>
+            {
+                var now = new DateTime(2026, 7, 16, 10, 0, 0);
+                var range = EventWindowPolicy.FullDayRange(3, 5, now);
+                Equal(new DateTime(2026, 7, 13), range.Item1); Equal(new DateTime(2026, 7, 22), range.Item2);
+            });
+            Test("calendar event supports 12 and 24 hour clocks", () =>
+            {
+                var item = new CalendarEvent { Start = new DateTime(2026, 7, 16, 13, 5, 0), End = new DateTime(2026, 7, 16, 14, 0, 0), Use24HourClock = true };
+                Equal("13:05", item.StartTimeText);
+                item.Use24HourClock = false;
+                Equal("1:05 PM", item.StartTimeText);
+            });
+            Test("timeline date supports configured full-date formats", () =>
+            {
+                var date = new DateTime(2026, 12, 31);
+                Equal("31.12.2026", CalendarEvent.FormatDate(date, "dd.MM.yyyy"));
+                Equal("2026-12-31", CalendarEvent.FormatDate(date, "yyyy-MM-dd"));
+                Equal("31.12.2026", CalendarEvent.FormatDate(date, "invalid"));
+            });
+            Test("timeline day pages keep today plus configured cross-day events", () =>
+            {
+                var now = new DateTime(2026, 7, 16, 23, 0, 0);
+                var settings = new AppSettings { PastMeetingHours = 2, FutureMeetingHours = 3, IncludePastDay = true, IncludeNextDay = true, ShowFullDayEventList = true };
+                var events = new[]
+                {
+                    new CalendarEvent { Id = "today", Start = now.Date.AddHours(8), End = now.Date.AddHours(9) },
+                    new CalendarEvent { Id = "tomorrow-window", Start = now.Date.AddDays(1).AddHours(1), End = now.Date.AddDays(1).AddHours(2) },
+                    new CalendarEvent { Id = "tomorrow-late", Start = now.Date.AddDays(1).AddHours(15), End = now.Date.AddDays(1).AddHours(16) }
+                };
+                var today = EventWindowPolicy.Page(events, settings, 0, now);
+                Equal(true, today.Any(item => item.Id == "today")); Equal(true, today.Any(item => item.Id == "tomorrow-window")); Equal(false, today.Any(item => item.Id == "tomorrow-late"));
+                var tomorrow = EventWindowPolicy.Page(events, settings, 1, now);
+                Equal(2, tomorrow.Count);
+            });
+            Test("taskbar can ignore free events without hiding popup events", () =>
+            {
+                var now = new DateTime(2026, 7, 16, 10, 0, 0);
+                var events = new[] { new CalendarEvent { Id = "free", Start = now.AddMinutes(5), End = now.AddMinutes(30), IsBusy = false }, new CalendarEvent { Id = "busy", Start = now.AddMinutes(10), End = now.AddMinutes(40), IsBusy = true } };
+                Equal("free", EventWindowPolicy.NextTaskbarEvent(events, false, now).Id);
+                Equal("busy", EventWindowPolicy.NextTaskbarEvent(events, true, now).Id);
+            });
+            Test("unknown meeting services use the generic video fallback", () =>
+            {
+                Equal(true, MeetingServiceIconConverter.IsKnown("Google Meet"));
+                Equal(false, MeetingServiceIconConverter.IsKnown("Web meeting"));
+            });
             Test("debug events carry provider icon data without calendar writes", () =>
             {
                 var now = new DateTime(2026, 7, 16, 10, 0, 0);

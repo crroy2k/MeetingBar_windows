@@ -19,18 +19,27 @@ namespace MeetingBar.Windows.ViewModels
         private bool _isRefreshing;
         private bool _isInitialLoading = true;
         private string _statusText;
+        private int _selectedDayOffset;
         public ObservableCollection<CalendarEvent> Events { get; } = new ObservableCollection<CalendarEvent>();
+        public ObservableCollection<CalendarEvent> PageEvents { get; } = new ObservableCollection<CalendarEvent>();
+        public ObservableCollection<CalendarEvent> TimelineEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<Bookmark> Bookmarks { get; } = new ObservableCollection<Bookmark>();
         public CalendarEvent NextEvent => Events.FirstOrDefault(x => x.End > DateTime.Now);
+        public CalendarEvent TaskbarEvent => EventWindowPolicy.NextTaskbarEvent(Events, _settings.Current.IgnoreFreeEventsInTaskbar, DateTime.Now);
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
         public bool IsRefreshing { get => _isRefreshing; set => Set(ref _isRefreshing, value); }
         public Visibility LoadingVisibility => _isInitialLoading ? Visibility.Visible : Visibility.Collapsed;
-        public bool HasEvents => Events.Count > 0;
+        public bool HasEvents => PageEvents.Count > 0;
         public bool HasBookmarks => Bookmarks.Count > 0;
         public int TimelinePastHours => _settings.Current.PastMeetingHours;
         public int TimelineFutureHours => _settings.Current.FutureMeetingHours;
         public bool TimelineIncludesPastDay => _settings.Current.IncludePastDay;
         public bool TimelineIncludesNextDay => _settings.Current.IncludeNextDay;
+        public int TimelinePastDays => _settings.Current.TimelinePastDays;
+        public int TimelineFutureDays => _settings.Current.TimelineFutureDays;
+        public bool Use24HourClock => _settings.Current.Use24HourClock;
+        public bool ShowTimelineDate => _settings.Current.ShowTimelineDate;
+        public string TimelineDateFormat => _settings.Current.TimelineDateFormat;
         public string Header => NextEvent?.IsCurrent == true ? "CURRENT MEETING" : "NEXT MEETING";
         public string NextTitle => NextEvent?.Title ?? "No upcoming meetings";
         public string NextMeta => NextEvent == null ? StatusText : NextEvent.TimeRange + "  •  " + (NextEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? NextEvent.Remaining : NextEvent.Countdown);
@@ -38,19 +47,19 @@ namespace MeetingBar.Windows.ViewModels
         {
             get
             {
-                if (NextEvent == null) return "No upcoming meetings";
+                if (TaskbarEvent == null) return "No upcoming meetings";
                 var mode = _settings.Current.TitleMode;
                 if (mode == TitleMode.Hidden) return "";
                 if (mode == TitleMode.Dot) return "•";
                 if (mode == TitleMode.Generic) return "Meeting";
-                var title = NextEvent.Title ?? "Untitled event";
+                var title = TaskbarEvent.Title ?? "Untitled event";
                 var max = Math.Max(5, _settings.Current.TitleMaxLength);
                 return title.Length > max ? title.Substring(0, max - 1) + "…" : title;
             }
         }
-        public string WidgetTime => NextEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : NextEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? NextEvent.Remaining : _settings.Current.TimeMode == TimeMode.StartTime ? NextEvent.Start.ToString("t") : NextEvent.Countdown;
+        public string WidgetTime => TaskbarEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : TaskbarEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? TaskbarEvent.Remaining : _settings.Current.TimeMode == TimeMode.StartTime ? CalendarEvent.FormatTime(TaskbarEvent.Start, _settings.Current.Use24HourClock) : TaskbarEvent.Countdown;
         public Visibility WidgetIconVisibility => _settings.Current.ShowServiceIcon ? Visibility.Visible : Visibility.Collapsed;
-        public string WidgetEventColor => NextEvent?.CalendarColor ?? "#6D7CFF";
+        public string WidgetEventColor => TaskbarEvent?.CalendarColor ?? "#6D7CFF";
         public bool CanJoinNext => NextEvent?.CanJoin == true;
         public ICommand JoinCommand { get; }
         public ICommand OpenEventCommand { get; }
@@ -70,7 +79,7 @@ namespace MeetingBar.Windows.ViewModels
             OpenBookmarkCommand = new RelayCommand(x => _opener.Open((x as Bookmark)?.Url));
             _sync.Changed += SyncChanged;
             _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
-            _clock.Tick += (s, e) => { foreach (var item in Events) item.RefreshComputed(); RaiseComputed(); };
+            _clock.Tick += (s, e) => { foreach (var item in TimelineEvents) item.RefreshComputed(); RaiseComputed(); };
             _clock.Start(); Rebuild();
         }
         public bool CanOpenCalendar => _settings.Current.Provider != CalendarProviderKind.Ics || !string.IsNullOrWhiteSpace(NextEvent?.CalendarOpenUrl);
@@ -92,10 +101,27 @@ namespace MeetingBar.Windows.ViewModels
         private void Rebuild()
         {
             Events.Clear(); foreach (var item in _sync.Events) Events.Add(item);
+            TimelineEvents.Clear(); foreach (var item in _sync.TimelineEvents) TimelineEvents.Add(item);
+            SelectDay(_selectedDayOffset);
             Bookmarks.Clear(); foreach (var item in _settings.Current.Bookmarks) Bookmarks.Add(item);
             StatusText = _sync.Status.Message; RaiseComputed();
         }
-        private void RaiseComputed() { Raise(nameof(NextEvent)); Raise(nameof(Header)); Raise(nameof(NextTitle)); Raise(nameof(NextMeta)); Raise(nameof(WidgetTitle)); Raise(nameof(WidgetTime)); Raise(nameof(WidgetIconVisibility)); Raise(nameof(WidgetEventColor)); Raise(nameof(CanJoinNext)); Raise(nameof(CanOpenCalendar)); Raise(nameof(HasEvents)); Raise(nameof(HasBookmarks)); Raise(nameof(TimelinePastHours)); Raise(nameof(TimelineFutureHours)); Raise(nameof(TimelineIncludesPastDay)); Raise(nameof(TimelineIncludesNextDay)); Raise(nameof(LoadingVisibility)); }
+        public void SelectDay(int dayOffset)
+        {
+            var minimum = _settings.Current.IncludePastDay ? -Math.Max(0, Math.Min(30, _settings.Current.TimelinePastDays)) : 0;
+            var maximum = _settings.Current.IncludeNextDay ? Math.Max(0, Math.Min(30, _settings.Current.TimelineFutureDays)) : 0;
+            _selectedDayOffset = Math.Max(minimum, Math.Min(maximum, dayOffset));
+            PageEvents.Clear();
+            DateTime? previousDay = null;
+            foreach (var item in EventWindowPolicy.Page(TimelineEvents, _settings.Current, _selectedDayOffset, DateTime.Now))
+            {
+                item.ShowDayDivider = previousDay.HasValue && previousDay.Value != item.Start.Date;
+                previousDay = item.Start.Date;
+                PageEvents.Add(item);
+            }
+            Raise(nameof(HasEvents));
+        }
+        private void RaiseComputed() { Raise(nameof(NextEvent)); Raise(nameof(TaskbarEvent)); Raise(nameof(Header)); Raise(nameof(NextTitle)); Raise(nameof(NextMeta)); Raise(nameof(WidgetTitle)); Raise(nameof(WidgetTime)); Raise(nameof(WidgetIconVisibility)); Raise(nameof(WidgetEventColor)); Raise(nameof(CanJoinNext)); Raise(nameof(CanOpenCalendar)); Raise(nameof(HasEvents)); Raise(nameof(HasBookmarks)); Raise(nameof(TimelinePastHours)); Raise(nameof(TimelineFutureHours)); Raise(nameof(TimelineIncludesPastDay)); Raise(nameof(TimelineIncludesNextDay)); Raise(nameof(TimelinePastDays)); Raise(nameof(TimelineFutureDays)); Raise(nameof(Use24HourClock)); Raise(nameof(ShowTimelineDate)); Raise(nameof(TimelineDateFormat)); Raise(nameof(LoadingVisibility)); }
         public void RefreshSettings() { _isInitialLoading = true; RaiseComputed(); }
         public void Dispose() { _sync.Changed -= SyncChanged; _clock.Stop(); }
     }

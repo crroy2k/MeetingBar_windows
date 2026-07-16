@@ -10,6 +10,8 @@ namespace MeetingBar.SettingsApp;
 
 public sealed partial class MainWindow : Window
 {
+    private static readonly string[] TimelineDatePatterns = { "dd.MM.yyyy", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy-MM-dd", "dd MMM yyyy" };
+    private static readonly string[] TimelineDateChoices = { "31.12.2026  (dd.MM.yyyy)", "12/31/2026  (MM/dd/yyyy)", "31/12/2026  (dd/MM/yyyy)", "2026-12-31  (yyyy-MM-dd)", "31 Dec 2026  (dd MMM yyyy)" };
     private readonly DispatcherTimer _stateTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly Dictionary<string, CheckBox> _calendarChecks = new();
     private readonly List<(TextBox Name, TextBox Url)> _bookmarkEditors = new();
@@ -17,12 +19,12 @@ public sealed partial class MainWindow : Window
     private string _page = "";
     private string _stateSignature = "";
 
-    private ComboBox? _widgetMode, _titleMode, _timeMode, _provider;
+    private ComboBox? _widgetMode, _titleMode, _timeMode, _provider, _timelineDateFormat;
     private Slider? _widgetWidth;
-    private NumberBox? _offsetX, _offsetY, _titleLength, _refreshMinutes, _notifyBefore, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours;
+    private NumberBox? _offsetX, _offsetY, _titleLength, _refreshMinutes, _notifyBefore, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours, _timelinePastDays, _timelineFutureDays;
     private TextBox? _widgetColor, _icsSources, _googleClientId, _browserPath, _browserArgs, _createUrl, _debugTitle, _debugColor;
     private PasswordBox? _googleClientSecret;
-    private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _allDay, _declined, _tentative, _free, _requireLink, _includePastDay, _includeNextDay;
+    private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _allDay, _declined, _tentative, _free, _ignoreFreeTaskbar, _requireLink, _includePastDay, _includeNextDay, _fullDayEventList, _use24HourClock, _showTimelineDate;
     private ToggleSwitch? _notify, _fullScreen, _notifyEnd, _autoJoin, _hotkey, _startWithWindows;
     private InfoBar? _googleStatus;
     private ComboBox? _debugService;
@@ -206,12 +208,21 @@ public sealed partial class MainWindow : Window
         _declined = Toggle(_settings.ShowDeclinedEvents); AddCard("Declined events", "Keep meetings you declined in the list.", _declined);
         _tentative = Toggle(_settings.ShowTentativeEvents); AddCard("Tentative and pending events", "Include invitations that are not accepted yet.", _tentative);
         _free = Toggle(_settings.ShowFreeEvents); AddCard("Free and non-busy events", "Include events that do not block your calendar.", _free);
+        _ignoreFreeTaskbar = Toggle(_settings.IgnoreFreeEventsInTaskbar); AddCard("Ignore free events in taskbar", "Keep free events in the expanded popup, but skip them for the taskbar and tray preview.", _ignoreFreeTaskbar);
         _requireLink = Toggle(_settings.RequireMeetingLink); AddCard("Require a meeting link", "Hide events that have no joinable video or web link.", _requireLink);
-        AddSection("Visible time window");
-        _pastMeetingHours = Number(_settings.PastMeetingHours, 0, 168); AddCard("Past meetings", "Hours of ended meetings retained in the event list and timeline.", _pastMeetingHours);
-        _futureMeetingHours = Number(_settings.FutureMeetingHours, 1, 168); AddCard("Next meetings", "Hours of upcoming meetings included in the event list and timeline.", _futureMeetingHours);
-        _includePastDay = Toggle(_settings.IncludePastDay); AddCard("Allow previous days", "Permit the past-hours window to cross midnight into earlier dates.", _includePastDay);
-        _includeNextDay = Toggle(_settings.IncludeNextDay); AddCard("Allow following days", "Permit the future-hours window to cross midnight into later dates.", _includeNextDay);
+        AddSection("Event list range");
+        _fullDayEventList = Toggle(_settings.ShowFullDayEventList); AddCard("Show complete days", "Show every event on each allowed day. When enabled, the hour values below affect only the timeline.", _fullDayEventList);
+        _includePastDay = Toggle(_settings.IncludePastDay); AddCard("Allow previous days", "Enable past-day pages and backward timeline scrubbing.", _includePastDay);
+        _includeNextDay = Toggle(_settings.IncludeNextDay); AddCard("Allow following days", "Enable future-day pages and forward timeline scrubbing.", _includeNextDay);
+        AddSection("Timeline range");
+        _timelinePastDays = Number(_settings.TimelinePastDays, 0, 30); AddCard("Days backward", "Maximum number of earlier days available while scrubbing.", _timelinePastDays);
+        _timelineFutureDays = Number(_settings.TimelineFutureDays, 0, 30); AddCard("Days forward", "Maximum number of later days available while scrubbing.", _timelineFutureDays);
+        _pastMeetingHours = Number(_settings.PastMeetingHours, 0, 168); AddCard("Past meetings", "Hours before now shown on today's timeline.", _pastMeetingHours);
+        _futureMeetingHours = Number(_settings.FutureMeetingHours, 1, 168); AddCard("Next meetings", "Hours after now shown on today's timeline.", _futureMeetingHours);
+        AddSection("Time format");
+        _use24HourClock = Toggle(_settings.Use24HourClock); AddCard("24-hour clock", "Use 13:30 instead of 1:30 PM throughout MeetingBar.", _use24HourClock);
+        _showTimelineDate = Toggle(_settings.ShowTimelineDate); AddCard("Show timeline date", "Display the scrubbed date at the top-right of the timeline.", _showTimelineDate);
+        _timelineDateFormat = Choice(TimelineDateChoices, Math.Max(0, Array.IndexOf(TimelineDatePatterns, _settings.TimelineDateFormat))); AddCard("Timeline date format", "Choose the full-date order and separators.", _timelineDateFormat);
         _refreshMinutes = Number(_settings.RefreshMinutes, 1, 120); AddCard("Refresh interval", "Minutes between automatic calendar updates.", _refreshMinutes);
     }
 
@@ -524,11 +535,18 @@ public sealed partial class MainWindow : Window
                 if (_declined != null) _settings.ShowDeclinedEvents = _declined.IsOn;
                 if (_tentative != null) _settings.ShowTentativeEvents = _tentative.IsOn;
                 if (_free != null) _settings.ShowFreeEvents = _free.IsOn;
+                if (_ignoreFreeTaskbar != null) _settings.IgnoreFreeEventsInTaskbar = _ignoreFreeTaskbar.IsOn;
                 if (_requireLink != null) _settings.RequireMeetingLink = _requireLink.IsOn;
                 if (_pastMeetingHours != null) _settings.PastMeetingHours = (int)Finite(_pastMeetingHours.Value, 3);
                 if (_futureMeetingHours != null) _settings.FutureMeetingHours = (int)Finite(_futureMeetingHours.Value, 24);
                 if (_includePastDay != null) _settings.IncludePastDay = _includePastDay.IsOn;
                 if (_includeNextDay != null) { _settings.IncludeNextDay = _includeNextDay.IsOn; _settings.IncludeTomorrow = _includeNextDay.IsOn; }
+                if (_timelinePastDays != null) _settings.TimelinePastDays = (int)Finite(_timelinePastDays.Value, 1);
+                if (_timelineFutureDays != null) _settings.TimelineFutureDays = (int)Finite(_timelineFutureDays.Value, 1);
+                if (_fullDayEventList != null) _settings.ShowFullDayEventList = _fullDayEventList.IsOn;
+                if (_use24HourClock != null) _settings.Use24HourClock = _use24HourClock.IsOn;
+                if (_showTimelineDate != null) _settings.ShowTimelineDate = _showTimelineDate.IsOn;
+                if (_timelineDateFormat != null) _settings.TimelineDateFormat = TimelineDatePatterns[Math.Max(0, _timelineDateFormat.SelectedIndex)];
                 if (_refreshMinutes != null) _settings.RefreshMinutes = (int)Finite(_refreshMinutes.Value, 3);
                 break;
             case "Meetings":

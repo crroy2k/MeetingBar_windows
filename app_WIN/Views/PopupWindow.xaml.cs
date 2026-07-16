@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Shell;
 using System.Windows.Threading;
 using MeetingBar.Windows.Interop;
@@ -22,6 +23,7 @@ namespace MeetingBar.Windows.Views
         private bool _isPreloading;
         private bool _isOpen;
         private double _restingTop;
+        private int _pageTransitionVersion;
 
         public bool IsOpen => _isOpen;
         public bool WasJustDismissed => DateTime.UtcNow - LastHiddenAtUtc < TimeSpan.FromMilliseconds(350);
@@ -65,6 +67,7 @@ namespace MeetingBar.Windows.Views
         {
             App.ApplyWindowsAccent();
             if (_isOpen) { Activate(); return; }
+            ResetDayPage();
             if (!_isPreloaded) Preload();
             _isClosing = false;
             _isAnimating = true;
@@ -100,6 +103,7 @@ namespace MeetingBar.Windows.Views
             else NativeMethods.ShowWindow(_handle, 0);
             Top = _restingTop;
             _isOpen = false;
+            ResetDayPage();
             LastHiddenAtUtc = DateTime.UtcNow;
             _isAnimating = false;
             _isClosing = false;
@@ -144,6 +148,45 @@ namespace MeetingBar.Windows.Views
                 MoveWindow(left, to);
                 NativeMethods.DwmFlush();
             });
+        }
+
+        private async void Timeline_SelectedDayChanged(object sender, TimelineDayChangedEventArgs e)
+        {
+            var version = ++_pageTransitionVersion;
+            await AnimateEventPageAsync(-e.Direction * 28, 0, 85);
+            if (version != _pageTransitionVersion) return;
+            (DataContext as MainViewModel)?.SelectDay(e.DayOffset);
+            EventScroller.ScrollToTop();
+            EventPageTranslate.BeginAnimation(TranslateTransform.XProperty, null);
+            EventPage.BeginAnimation(OpacityProperty, null);
+            EventPageTranslate.X = e.Direction * 28;
+            EventPage.Opacity = 0;
+            await AnimateEventPageAsync(0, 1, 115);
+        }
+
+        private Task AnimateEventPageAsync(double targetX, double targetOpacity, int milliseconds)
+        {
+            var completion = new TaskCompletionSource<bool>();
+            var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var duration = TimeSpan.FromMilliseconds(milliseconds);
+            var movement = new DoubleAnimation(targetX, duration) { EasingFunction = easing };
+            var fade = new DoubleAnimation(targetOpacity, duration) { EasingFunction = easing };
+            fade.Completed += (s, e) => completion.TrySetResult(true);
+            EventPageTranslate.BeginAnimation(TranslateTransform.XProperty, movement, HandoffBehavior.SnapshotAndReplace);
+            EventPage.BeginAnimation(OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
+            return completion.Task;
+        }
+
+        private void ResetDayPage()
+        {
+            _pageTransitionVersion++;
+            TimelineControl.ResetToToday();
+            (DataContext as MainViewModel)?.SelectDay(0);
+            EventScroller.ScrollToTop();
+            EventPageTranslate.BeginAnimation(TranslateTransform.XProperty, null);
+            EventPage.BeginAnimation(OpacityProperty, null);
+            EventPageTranslate.X = 0;
+            EventPage.Opacity = 1;
         }
 
         private void MoveWindow(int left, int top) => NativeMethods.SetWindowPos(_handle, IntPtr.Zero, left, top, 0, 0,

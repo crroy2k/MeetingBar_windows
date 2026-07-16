@@ -33,12 +33,19 @@ public sealed class AppSettings
     public bool ShowDeclinedEvents { get; set; }
     public bool ShowTentativeEvents { get; set; } = true;
     public bool ShowFreeEvents { get; set; } = true;
+    public bool IgnoreFreeEventsInTaskbar { get; set; }
     public bool RequireMeetingLink { get; set; }
     public bool IncludeTomorrow { get; set; } = true;
     public int PastMeetingHours { get; set; } = 3;
     public int FutureMeetingHours { get; set; } = 24;
     public bool IncludePastDay { get; set; }
     public bool IncludeNextDay { get; set; } = true;
+    public int TimelinePastDays { get; set; } = 1;
+    public int TimelineFutureDays { get; set; } = 1;
+    public bool ShowFullDayEventList { get; set; } = true;
+    public bool Use24HourClock { get; set; } = true;
+    public bool ShowTimelineDate { get; set; } = true;
+    public string TimelineDateFormat { get; set; } = "dd.MM.yyyy";
     public int EventWindowSettingsVersion { get; set; } = 1;
     public bool StartWithWindows { get; set; }
     public bool NotifyBeforeMeeting { get; set; } = true;

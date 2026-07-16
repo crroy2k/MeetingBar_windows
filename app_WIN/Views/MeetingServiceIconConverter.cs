@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
 
@@ -10,7 +11,7 @@ namespace MeetingBar.Windows.Views
     {
         private static readonly Dictionary<string, string> Icons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["Google Meet"] = "google_meet_icon", ["Proton Meet"] = "no_online_session", ["Zoom"] = "zoom_icon", ["ZoomGov"] = "zoom_icon",
+            ["Google Meet"] = "google_meet_icon", ["Zoom"] = "zoom_icon", ["ZoomGov"] = "zoom_icon",
             ["Microsoft Teams"] = "ms_teams_icon", ["Cisco Webex"] = "webex_icon", ["Jitsi"] = "jitsi_icon", ["Amazon Chime"] = "amazon_chime_icon",
             ["RingCentral"] = "ringcentral_icon", ["GoToMeeting"] = "gotomeeting_icon", ["GoToWebinar"] = "gotowebinar_icon", ["BlueJeans"] = "bluejeans_icon",
             ["8x8"] = "8x8_icon", ["Demio"] = "demio_icon", ["Join.me"] = "joinme_icon", ["Whereby"] = "whereby_icon",
@@ -30,10 +31,19 @@ namespace MeetingBar.Windows.Views
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             string icon;
-            if (!Icons.TryGetValue(value as string ?? "", out icon)) icon = "no_online_session";
+            if (!Icons.TryGetValue(value as string ?? "", out icon)) return null;
             return new BitmapImage(new Uri("pack://application:,,,/Resources/MeetingServices/" + icon + ".png", UriKind.Absolute));
         }
 
+        public static bool IsKnown(string service) => !string.IsNullOrWhiteSpace(service) && Icons.ContainsKey(service);
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
+    }
+
+    public sealed class UnknownMeetingServiceVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+            !string.IsNullOrWhiteSpace(value as string) && !MeetingServiceIconConverter.IsKnown(value as string) ? Visibility.Visible : Visibility.Collapsed;
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
     }
 }

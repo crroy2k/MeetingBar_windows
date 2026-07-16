@@ -4,6 +4,7 @@ For next releases info look here: <https://github.com/leits/MeetingBar/releases>
 
 ## Unreleased
 
+* Windows event lists use animated day pages driven by a continuously scrubbed horizontal timeline, with click-to-today, configurable day depth and dates, complete-day controls, 12/24-hour clocks, taskbar-only free-event filtering, and generic video-link icons.
 * Added three visibility modes for non-busy events: show everywhere, show in the menu but hide from the menu-bar preview, or hide everywhere.
 * Timeline events now use Google Calendar event colors, support adjustable past and future ranges, and open Google Calendar or a selected calendar app when clicked.
 * Local builds with missing Google OAuth settings now show a provider setup error instead of crashing during onboarding.

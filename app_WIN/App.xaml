@@ -16,6 +16,7 @@
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent}"/>
     <Style TargetType="TextBlock"><Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI"/><Setter Property="Foreground" Value="{StaticResource InkBrush}"/></Style>
     <views:MeetingServiceIconConverter x:Key="MeetingServiceIcon"/>
+    <views:UnknownMeetingServiceVisibilityConverter x:Key="UnknownMeetingServiceVisibility"/>
     <BooleanToVisibilityConverter x:Key="BooleanVisibility"/>
     <Style x:Key="EmojiText" TargetType="TextBlock"><Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI"/><Setter Property="Foreground" Value="{StaticResource InkBrush}"/><Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/><Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/></Style>
     <Style x:Key="OverlayScrollBar" TargetType="ScrollBar">

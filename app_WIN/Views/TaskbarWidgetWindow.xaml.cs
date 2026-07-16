@@ -38,7 +38,7 @@ namespace MeetingBar.Windows.Views
         public void ApplyPosition(AppSettings settings)
         {
             ApplyAppearance(settings);
-            Width = DesiredWidgetWidth(settings); Height = 42;
+            Width = DesiredWidgetWidth(settings); Height = 40;
             var taskbar = NativeMethods.FindWindow("Shell_TrayWnd", null);
             NativeMethods.RECT rect;
             if (!NativeMethods.GetWindowRect(taskbar, out rect)) { Left = SystemParameters.WorkArea.Right - Width; Top = SystemParameters.WorkArea.Bottom - Height; return; }
