@@ -21,14 +21,17 @@ namespace MeetingBar.Windows.Views
             NativeMethods.RECT rect;
             if (!NativeMethods.GetWindowRect(taskbar, out rect)) { Left = SystemParameters.WorkArea.Right - Width; Top = SystemParameters.WorkArea.Bottom - Height; return; }
             var dpi = VisualTreeHelper.GetDpi(this); var sx = dpi.DpiScaleX; var sy = dpi.DpiScaleY;
-            Top = rect.Top / sy + Math.Max(0, ((rect.Bottom - rect.Top) / sy - Height) / 2.0) + settings.WidgetOffsetY;
-            if (settings.WidgetMode == WidgetMode.TaskbarLeft) Left = rect.Left / sx + 8 + settings.WidgetOffsetX;
+            var targetTop = rect.Top / sy + Math.Max(0, ((rect.Bottom - rect.Top) / sy - Height) / 2.0) + settings.WidgetOffsetY;
+            Top = Clamp(targetTop, SystemParameters.VirtualScreenTop, SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - Height);
+            if (settings.WidgetMode == WidgetMode.TaskbarLeft) Left = Clamp(rect.Left / sx + 8 + settings.WidgetOffsetX, SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - Width);
             else
             {
                 var notify = NativeMethods.FindWindowEx(taskbar, IntPtr.Zero, "TrayNotifyWnd", null);
                 NativeMethods.RECT trayRect;
-                Left = NativeMethods.GetWindowRect(notify, out trayRect) ? trayRect.Left / sx - Width - 6 + settings.WidgetOffsetX : rect.Right / sx - Width - 180 + settings.WidgetOffsetX;
+                var targetLeft = NativeMethods.GetWindowRect(notify, out trayRect) ? trayRect.Left / sx - Width - 6 + settings.WidgetOffsetX : rect.Right / sx - Width - 180 + settings.WidgetOffsetX;
+                Left = Clamp(targetLeft, SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - Width);
             }
         }
+        private static double Clamp(double value, double minimum, double maximum) => Math.Max(minimum, Math.Min(maximum, value));
     }
 }

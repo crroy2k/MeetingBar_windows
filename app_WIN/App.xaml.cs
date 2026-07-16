@@ -18,12 +18,16 @@ namespace MeetingBar.Windows
             _singleInstance = new Mutex(true, "Local\\MeetingBar.Windows", out created);
             if (!created) { SendCommand(e.Args.Length == 0 ? "popup" : e.Args[0].TrimStart('-')); Shutdown(); return; }
             base.OnStartup(e);
+            AppDomain.CurrentDomain.UnhandledException += (s, args) => AppLog.Error("Unhandled", args.ExceptionObject as Exception ?? new Exception("Unknown fatal error"));
+            System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, args) => { AppLog.Error("Task", args.Exception); args.SetObserved(); };
             DispatcherUnhandledException += (s, args) =>
             {
+                AppLog.Error("Dispatcher", args.Exception);
                 MessageBox.Show(args.Exception.Message, "MeetingBar", MessageBoxButton.OK, MessageBoxImage.Error);
                 args.Handled = true;
             };
             _controller = new AppController();
+            AppLog.Info("Application started");
             _controller.Start();
             if (e.Args.Length > 0) _controller.ExecuteCommand(e.Args[0].TrimStart('-'));
         }

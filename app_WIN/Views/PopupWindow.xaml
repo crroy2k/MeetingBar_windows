@@ -1,6 +1,6 @@
 <Window x:Class="MeetingBar.Windows.Views.PopupWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MeetingBar" Width="410" Height="690" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
+        Title="MeetingBar" Icon="/Resources/MeetingBar.ico" Width="410" Height="690" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
         AllowsTransparency="True" Background="Transparent" Deactivated="Window_Deactivated">
   <Border Background="{StaticResource PanelBrush}" BorderBrush="#FF363E53" BorderThickness="1" CornerRadius="14" Padding="16">
     <Border.Effect><DropShadowEffect BlurRadius="28" ShadowDepth="8" Opacity="0.42"/></Border.Effect>

@@ -44,7 +44,7 @@ namespace MeetingBar.Windows.Services
             menu.Items.Add("Quit", null, (s, e) => Application.Current.Shutdown());
             _tray.ContextMenuStrip = menu;
             _notifications = new NotificationService(_settings, _opener, _tray);
-            _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) }; _positionTimer.Tick += (s, e) => { if (_widget?.IsVisible == true) _widget.ApplyPosition(_settings.Current); };
+            _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) }; _positionTimer.Tick += (s, e) => EnsureWidgetVisible();
             _sync.Changed += (s, e) => Application.Current.Dispatcher.BeginInvoke(new Action(UpdateTray));
             var parameters = new HwndSourceParameters("MeetingBar.MessageWindow") { Width = 0, Height = 0, WindowStyle = unchecked((int)0x80000000) };
             _messageWindow = new HwndSource(parameters); _messageWindow.AddHook(WndProc);
@@ -97,12 +97,29 @@ namespace MeetingBar.Windows.Services
             }
             else
             {
-                if (_widget == null) _widget = new TaskbarWidgetWindow(_main, TogglePopup);
+                if (_widget == null) CreateWidget();
                 _widget.ApplyPosition(_settings.Current); _widget.Show();
             }
             NativeMethods.UnregisterHotKey(_messageWindow.Handle, 1);
             if (_settings.Current.GlobalJoinHotkey) NativeMethods.RegisterHotKey(_messageWindow.Handle, 1, NativeMethods.ModControl | NativeMethods.ModAlt, (uint)Forms.Keys.J);
             _sync.Schedule(); UpdateTray();
+        }
+
+        private void CreateWidget()
+        {
+            _widget = new TaskbarWidgetWindow(_main, TogglePopup);
+            _widget.Closed += (s, e) => _widget = null;
+        }
+
+        private void EnsureWidgetVisible()
+        {
+            if (_settings.Current.WidgetMode == WidgetMode.TrayOnly) return;
+            if (_widget == null) CreateWidget();
+            if (!_widget.IsVisible) _widget.Show();
+            var widgetHandle = new WindowInteropHelper(_widget).Handle;
+            if (widgetHandle != IntPtr.Zero && !NativeMethods.IsWindowVisible(widgetHandle)) NativeMethods.ShowWindow(widgetHandle, 5);
+            _widget.ApplyPosition(_settings.Current);
+            if (widgetHandle != IntPtr.Zero) NativeMethods.SetWindowPos(widgetHandle, NativeMethods.HwndTopmost, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow);
         }
 
         private IntPtr WndProc(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -148,6 +165,12 @@ namespace MeetingBar.Windows.Services
 
         private static Icon CreateTrayIcon()
         {
+            try
+            {
+                var extracted = Icon.ExtractAssociatedIcon(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+                if (extracted != null) return (Icon)extracted.Clone();
+            }
+            catch { }
             var bitmap = new Bitmap(32, 32, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             using (var g = Graphics.FromImage(bitmap))
             using (var background = new SolidBrush(System.Drawing.Color.FromArgb(255, 109, 124, 255)))

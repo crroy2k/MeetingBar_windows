@@ -10,7 +10,7 @@ First launch defaults to Classic Outlook. Right-click the tray icon, choose **Se
 
 - **Outlook** reads local Classic Outlook calendars through its local COM interface. New Outlook does not expose that interface.
 - **ICS** accepts one local `.ics` path or HTTPS calendar feed URL per line.
-- **Google** uses direct Calendar API access. Enable Google Calendar API, create an OAuth client of type **Desktop app**, enter its client ID in Settings, then connect. OAuth uses PKCE and a temporary loopback callback on `127.0.0.1`; the refresh token is encrypted with Windows Data Protection for the signed-in Windows user.
+- **Google** uses direct Calendar API access. Follow the four-step guide in Settings. Besides enabling Google Calendar API, the OAuth consent configuration must include `https://www.googleapis.com/auth/calendar.readonly` under **Data Access**. Create an OAuth client of type **Desktop app**, enter its client ID, then connect. OAuth uses PKCE and a temporary loopback callback on `127.0.0.1`; the refresh token is encrypted with Windows Data Protection for the signed-in Windows user.
 
 ## Surfaces
 
@@ -65,3 +65,9 @@ Source structure follows the Mac app's feature ownership: calendar providers and
 - Outlook support requires Classic Outlook. Google and ICS work without Outlook.
 - Notification balloons use the built-in notification-area API; full-screen reminders provide the richer join action.
 - The portable binary is unsigned. Production distribution should add Authenticode signing and an MSIX or installer.
+
+## Diagnostics
+
+Provider refresh results and crash information are written without event titles or URLs to `%APPDATA%\MeetingBar\meetingbar.log`.
+
+If Google reports missing Calendar permission, open **Settings → Calendars**, complete step 3 under **Data Access**, click **Disconnect**, then connect again so Google issues a token with the required scope.

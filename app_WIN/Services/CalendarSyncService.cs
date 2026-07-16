@@ -57,11 +57,13 @@ namespace MeetingBar.Windows.Services
                 _lastGoodEvents = Filter(result.Item2).ToList();
                 Events = _lastGoodEvents;
                 Status = new ProviderStatus { Provider = _settings.Current.Provider.ToString(), IsHealthy = true, Message = "Updated " + DateTime.Now.ToString("t") };
+                AppLog.Info("Calendar refresh succeeded: provider=" + _settings.Current.Provider + ", calendars=" + Calendars.Count + ", visibleEvents=" + Events.Count);
             }
             catch (Exception ex)
             {
                 Events = _lastGoodEvents;
                 Status = new ProviderStatus { Provider = _settings.Current.Provider.ToString(), IsHealthy = false, Message = ex.Message };
+                AppLog.Error("Calendar refresh", ex);
             }
             finally { Interlocked.Exchange(ref _refreshing, 0); Changed?.Invoke(this, EventArgs.Empty); }
         }

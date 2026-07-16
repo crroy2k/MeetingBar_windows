@@ -59,6 +59,7 @@ namespace MeetingBar.Windows.Services
                 var code = query["code"];
                 if (string.IsNullOrWhiteSpace(code)) throw new InvalidOperationException("Google did not return an authorization code.");
                 var token = await PostForm("https://oauth2.googleapis.com/token", new Dictionary<string, string> { ["code"] = code, ["client_id"] = settings.GoogleClientId, ["client_secret"] = settings.GoogleClientSecret ?? "", ["redirect_uri"] = redirect, ["grant_type"] = "authorization_code", ["code_verifier"] = verifier });
+                EnsureCalendarScope(token);
                 var refresh = Value(token, "refresh_token");
                 if (string.IsNullOrWhiteSpace(refresh)) throw new InvalidOperationException("Google did not issue a refresh token.");
                 settings.GoogleRefreshTokenProtected = Protect(refresh);
@@ -101,7 +102,14 @@ namespace MeetingBar.Windows.Services
         private async Task<string> AccessToken(AppSettings s)
         {
             var token = await PostForm("https://oauth2.googleapis.com/token", new Dictionary<string, string> { ["client_id"] = s.GoogleClientId, ["client_secret"] = s.GoogleClientSecret ?? "", ["refresh_token"] = Unprotect(s.GoogleRefreshTokenProtected), ["grant_type"] = "refresh_token" });
+            EnsureCalendarScope(token);
             return Value(token, "access_token");
+        }
+        internal static bool HasCalendarScope(string scopes) => (scopes ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Contains("https://www.googleapis.com/auth/calendar.readonly");
+        private static void EnsureCalendarScope(Dictionary<string, object> token)
+        {
+            if (HasCalendarScope(Value(token, "scope"))) return;
+            throw new InvalidOperationException("Google connected without Calendar permission. In Settings → Calendars, complete step 3: add the calendar.readonly scope under Google Data Access. Then Disconnect and connect again.");
         }
         private async Task<Dictionary<string, object>> PostForm(string url, Dictionary<string, string> form)
         {
@@ -118,8 +126,35 @@ namespace MeetingBar.Windows.Services
         {
             var request = new HttpRequestMessage(HttpMethod.Get, url); request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             var response = await _http.SendAsync(request); var body = await response.Content.ReadAsStringAsync();
-            if (!response.IsSuccessStatusCode) throw new InvalidOperationException("Google Calendar error: " + response.StatusCode);
+            if (!response.IsSuccessStatusCode) throw new InvalidOperationException(ApiErrorMessage(response.StatusCode, body));
             return _json.Deserialize<Dictionary<string, object>>(body);
+        }
+        internal static string ApiErrorMessage(HttpStatusCode status, string body)
+        {
+            var reason = "";
+            try
+            {
+                var root = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(body);
+                var error = root != null && root.ContainsKey("error") ? root["error"] as Dictionary<string, object> : null;
+                var errors = error != null && error.ContainsKey("errors") ? error["errors"] as IEnumerable : null;
+                var first = errors?.Cast<object>().OfType<Dictionary<string, object>>().FirstOrDefault();
+                reason = Value(first, "reason") ?? "";
+            }
+            catch { }
+
+            switch (reason)
+            {
+                case "accessNotConfigured":
+                    return "Google Calendar API is not enabled for this OAuth project. In Settings → Calendars, complete step 2 in the same Google Cloud project as the Desktop client. Click Enable, wait a minute, then Refresh.";
+                case "insufficientPermissions":
+                    return "Google connected without Calendar permission. In Settings → Calendars, complete step 3 under Data Access, then Disconnect and connect again.";
+                case "dailyLimitExceeded":
+                case "rateLimitExceeded":
+                case "userRateLimitExceeded":
+                    return "Google Calendar API quota is temporarily exhausted. Try Refresh later.";
+                default:
+                    return "Google Calendar error: " + status;
+            }
         }
         private async Task<string> GetEmail(string token) { var json = await GetJson("https://www.googleapis.com/oauth2/v2/userinfo", token); return Value(json, "email"); }
         private static IEnumerable<Dictionary<string, object>> Items(Dictionary<string, object> x) => x.ContainsKey("items") ? ((IEnumerable)x["items"]).Cast<object>().OfType<Dictionary<string, object>>() : Enumerable.Empty<Dictionary<string, object>>();

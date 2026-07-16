@@ -35,7 +35,8 @@ namespace MeetingBar.Windows.ViewModels
             _service = service; _sync = sync; _saved = saved; Settings = service.CopyCurrent();
             foreach (var x in sync.Calendars) { x.Selected = Settings.SelectedCalendarIds.Count == 0 || Settings.SelectedCalendarIds.Contains(x.Id); Calendars.Add(x); }
             foreach (var x in Settings.Bookmarks) Bookmarks.Add(x);
-            ConnectionStatus = sync.Google.IsConnected(Settings) ? "Connected as " + Settings.GoogleAccountEmail : "Not connected";
+            if (sync.Google.IsConnected(Settings) && Settings.Provider == CalendarProviderKind.Google && !sync.Status.IsHealthy && !string.IsNullOrWhiteSpace(sync.Status.Message)) ConnectionStatus = sync.Status.Message;
+            else ConnectionStatus = sync.Google.IsConnected(Settings) ? "Connected as " + Settings.GoogleAccountEmail : "Not connected";
             SaveCommand = new RelayCommand<Window>(Save);
             ConnectGoogleCommand = new RelayCommand(async () => await ConnectGoogle());
             DisconnectGoogleCommand = new RelayCommand(DisconnectGoogle);
@@ -51,7 +52,9 @@ namespace MeetingBar.Windows.ViewModels
         }
         private async Task ConnectGoogle()
         {
-            try { ConnectionStatus = "Waiting for browser…"; await _sync.Google.ConnectAsync(Settings); ConnectionStatus = "Connected as " + Settings.GoogleAccountEmail; }
+            if (string.IsNullOrWhiteSpace(Settings.GoogleClientId)) { ConnectionStatus = "Client ID missing. Complete steps 1–3, then paste the Desktop app client ID."; return; }
+            if (!Settings.GoogleClientId.Trim().EndsWith(".apps.googleusercontent.com", StringComparison.OrdinalIgnoreCase)) { ConnectionStatus = "That does not look like a Google Desktop app client ID. It should end in .apps.googleusercontent.com."; return; }
+            try { ConnectionStatus = "Browser opened. Approve read-only calendar access there…"; await _sync.Google.ConnectAsync(Settings); Settings.Provider = CalendarProviderKind.Google; ConnectionStatus = "Connected as " + Settings.GoogleAccountEmail + ". Click Save to finish."; }
             catch (Exception ex) { ConnectionStatus = ex.Message; }
         }
         private void DisconnectGoogle() { _sync.Google.Disconnect(Settings); ConnectionStatus = "Not connected"; }
