@@ -48,6 +48,9 @@ namespace MeetingBar.Windows.Services
         }
 
         public static CalendarEvent NextTaskbarEvent(IEnumerable<CalendarEvent> events, bool ignoreFreeEvents, DateTime now) =>
-            (events ?? Enumerable.Empty<CalendarEvent>()).FirstOrDefault(item => item.End > now && (!ignoreFreeEvents || item.IsBusy));
+            (events ?? Enumerable.Empty<CalendarEvent>()).FirstOrDefault(item => item.End > now && !item.IsDismissed && (!ignoreFreeEvents || item.IsBusy));
+
+        public static bool CanDismiss(CalendarEvent item, DateTime now) => item != null && !item.IsDismissed && item.End > now;
+        public static bool ShouldRestoreDismissal(CalendarEvent item, DateTime now) => item != null && item.IsDismissed && item.End <= now;
     }
 }

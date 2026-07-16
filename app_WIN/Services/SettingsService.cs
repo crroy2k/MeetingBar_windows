@@ -33,6 +33,12 @@ namespace MeetingBar.Windows.Services
                 Current.EventWindowSettingsVersion = 1;
                 Save();
             }
+            if (Current.NotificationScheduleVersion < 1)
+            {
+                Current.NotificationMinutesBefore = new System.Collections.Generic.List<int> { Math.Max(0, Math.Min(120, Current.NotifyMinutesBefore)) };
+                Current.NotificationScheduleVersion = 1;
+                Save();
+            }
         }
 
         private AppSettings Load()

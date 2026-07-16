@@ -8,6 +8,7 @@ public enum WidgetMode { TrayOnly, NearTray, TaskbarLeft }
 public enum CalendarProviderKind { Outlook, Ics, Google }
 public enum TitleMode { Full, Generic, Dot, Hidden }
 public enum TimeMode { Countdown, StartTime, Hidden }
+public enum WidgetHighlightStyle { Hover, Shine }
 
 public sealed class Bookmark
 {
@@ -29,6 +30,12 @@ public sealed class AppSettings
     public bool ShowOngoingTimeRemaining { get; set; } = true;
     public int TitleMaxLength { get; set; } = 64;
     public bool ShowServiceIcon { get; set; } = true;
+    public bool EnableWinWWidget { get; set; }
+    public bool HighlightStartingMeetings { get; set; } = true;
+    public int HighlightMinutesBefore { get; set; } = 5;
+    public int HighlightMinutesAfterStart { get; set; } = 10;
+    public bool HighlightWholeMeeting { get; set; }
+    public WidgetHighlightStyle WidgetHighlightStyle { get; set; } = WidgetHighlightStyle.Shine;
     public bool ShowAllDayEvents { get; set; } = true;
     public bool ShowDeclinedEvents { get; set; }
     public bool ShowTentativeEvents { get; set; } = true;
@@ -50,6 +57,8 @@ public sealed class AppSettings
     public bool StartWithWindows { get; set; }
     public bool NotifyBeforeMeeting { get; set; } = true;
     public int NotifyMinutesBefore { get; set; } = 5;
+    public List<int> NotificationMinutesBefore { get; set; } = [5];
+    public int NotificationScheduleVersion { get; set; }
     public bool NotifyAtEnd { get; set; }
     public bool FullscreenReminder { get; set; }
     public bool AutoJoin { get; set; }

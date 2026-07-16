@@ -35,6 +35,14 @@ $settingsOutput = Join-Path $root "bin\$Configuration\Settings"
 New-Item -ItemType Directory -Force $settingsOutput | Out-Null
 Copy-Item (Join-Path $settingsPublish "*") $settingsOutput -Recurse -Force
 
+$widgetPublish = Join-Path $root "WidgetProvider\bin\$Configuration\publish-folder"
+& $dotnet publish (Join-Path $root "WidgetProvider\MeetingBar.WidgetProvider.csproj") -c $Configuration -r win-x64 --self-contained true -p:Platform=x64 -p:WindowsAppSDKSelfContained=true -p:EnableMsixTooling=true -p:PublishTrimmed=false -o $widgetPublish
+if ($LASTEXITCODE -ne 0) { throw "MeetingBar Win+W widget provider build failed." }
+Copy-Item (Join-Path $root "WidgetProvider\Package.appxmanifest") (Join-Path $widgetPublish "AppxManifest.xml") -Force
+$widgetOutput = Join-Path $root "bin\$Configuration\WinWWidget"
+New-Item -ItemType Directory -Force $widgetOutput | Out-Null
+Copy-Item (Join-Path $widgetPublish "*") $widgetOutput -Recurse -Force
+
 if ($Test) {
     & $msbuild (Join-Path $root "Tests\MeetingBar.Tests.csproj") /t:Rebuild /p:Configuration=$Configuration /m
     if ($LASTEXITCODE -ne 0) { throw "MeetingBar test build failed." }
@@ -50,9 +58,12 @@ if ($Package) {
     $settingsStage = Join-Path $stage "Settings"
     New-Item -ItemType Directory -Force $settingsStage | Out-Null
     Copy-Item (Join-Path $root "bin\$Configuration\Settings\*") $settingsStage -Recurse -Force
+    $widgetStage = Join-Path $stage "WinWWidget"
+    New-Item -ItemType Directory -Force $widgetStage | Out-Null
+    Copy-Item (Join-Path $root "bin\$Configuration\WinWWidget\*") $widgetStage -Recurse -Force
     Copy-Item (Join-Path $root "README.md") (Join-Path $stage "README.md") -Force
     Copy-Item (Join-Path $root "THIRD-PARTY-NOTICES.md") (Join-Path $stage "THIRD-PARTY-NOTICES.md") -Force
     Copy-Item (Join-Path $root "..\LICENSE") (Join-Path $stage "LICENSE") -Force
-    Compress-Archive -Path (Join-Path $stage "MeetingBar.exe"), $settingsStage, (Join-Path $stage "README.md"), (Join-Path $stage "THIRD-PARTY-NOTICES.md"), (Join-Path $stage "LICENSE") -DestinationPath (Join-Path $dist "MeetingBar-Windows-portable.zip") -Force
+    Compress-Archive -Path (Join-Path $stage "MeetingBar.exe"), $settingsStage, $widgetStage, (Join-Path $stage "README.md"), (Join-Path $stage "THIRD-PARTY-NOTICES.md"), (Join-Path $stage "LICENSE") -DestinationPath (Join-Path $dist "MeetingBar-Windows-portable.zip") -Force
     Write-Host "Package: $dist\MeetingBar-Windows-portable.zip"
 }

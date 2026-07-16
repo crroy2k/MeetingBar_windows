@@ -4,6 +4,9 @@ For next releases info look here: <https://github.com/leits/MeetingBar/releases>
 
 ## Unreleased
 
+* Dismissed Windows meetings remain visible in agendas with volume-off indicators and an inline restore action, while taskbar promotion, reminders, and auto-join stay suppressed; ended events unmute automatically.
+* Windows now supports multiple reminder times per meeting and a configurable hover or animated-shine taskbar highlight around meeting start.
+* Added an optional native Windows 11 Win+W widget with current/next meeting, daily agenda, live countdowns, event colors, and primary meeting actions.
 * Windows event lists use animated day pages driven by a continuously scrubbed horizontal timeline, with concise ended states, click-to-today, configurable day depth and dates, complete-day controls, 12/24-hour clocks, taskbar-only free-event filtering, generic video-link icons, and docked event-detail submenus with Lucide calendar, dismissal, clipboard, and configurable map actions.
 * Added three visibility modes for non-busy events: show everywhere, show in the menu but hide from the menu-bar preview, or hide everywhere.
 * Timeline events now use Google Calendar event colors, support adjustable past and future ranges, and open Google Calendar or a selected calendar app when clicked.

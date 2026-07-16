@@ -52,7 +52,7 @@ namespace MeetingBar.Windows.Services
             _tray.ContextMenuStrip = menu;
             _notifications = new NotificationService(_settings, _opener, _tray);
             _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) }; _positionTimer.Tick += (s, e) => { EnsureWidgetVisible(); UpdateTrayIcon(_main.TaskbarEvent); };
-            _sync.Changed += (s, e) => Application.Current.Dispatcher.BeginInvoke(new Action(() => { UpdateTray(); WriteSettingsState(); }));
+            _sync.Changed += (s, e) => Application.Current.Dispatcher.BeginInvoke(new Action(() => { UpdateTray(); WriteSettingsState(); WriteWinWWidgetState(); }));
             var parameters = new HwndSourceParameters("MeetingBar.MessageWindow") { Width = 0, Height = 0, WindowStyle = unchecked((int)0x80000000) };
             _messageWindow = new HwndSource(parameters); _messageWindow.AddHook(WndProc);
         }
@@ -62,7 +62,7 @@ namespace MeetingBar.Windows.Services
             ApplySettings();
             _popup = new PopupWindow(_main, OpenSettings);
             _popup.Preload();
-            _sync.Start(); _notifications.Start(() => _sync.Events); _positionTimer.Start(); UpdateTray(); WriteSettingsState(); _ = ListenForCommands();
+            _sync.Start(); _notifications.Start(() => _sync.Events); _positionTimer.Start(); UpdateTray(); WriteSettingsState(); WriteWinWWidgetState(); _ = ListenForCommands();
         }
 
         private async Task ListenForCommands()
@@ -92,6 +92,7 @@ namespace MeetingBar.Windows.Services
             {
                 case "join": _opener.Open(_main.NextEvent); break;
                 case "create": _opener.Open(_settings.Current.CreateMeetingUrl); break;
+                case "calendar": if (_main.OpenCalendarCommand.CanExecute(null)) _main.OpenCalendarCommand.Execute(null); break;
                 case "refresh": _ = _sync.RefreshAsync(); break;
                 case "settings": OpenSettings(); break;
                 case "reload": _ = ReloadSettings(); break;
@@ -199,6 +200,13 @@ namespace MeetingBar.Windows.Services
             ApplySettings();
             await _sync.RefreshAsync();
             WriteSettingsState();
+            WriteWinWWidgetState();
+        }
+
+        private void WriteWinWWidgetState()
+        {
+            try { WinWWidgetStateService.Write(_sync.Events, _settings.Current); }
+            catch (Exception error) { AppLog.Error("Win+W widget state", error); }
         }
 
         private async Task ConnectGoogleFromSettings()

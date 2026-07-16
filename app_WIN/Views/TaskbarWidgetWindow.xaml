@@ -3,12 +3,17 @@
         Icon="/Resources/MeetingBar.ico" Width="300" Height="40" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True" AllowsTransparency="True" Background="Transparent">
   <Button Click="Widget_Click" MouseEnter="Widget_MouseEnter" MouseLeave="Widget_MouseLeave" Padding="0" BorderThickness="0" Background="#01000000" Focusable="False" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
     <Button.Template><ControlTemplate TargetType="Button"><Grid Background="#01000000"><ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Grid></ControlTemplate></Button.Template>
-    <Border x:Name="WidgetSurface" Background="#01000000" BorderThickness="0" CornerRadius="4" Padding="9,4,10,5" SnapsToDevicePixels="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-        <Border Width="16" Height="16" CornerRadius="4" Background="{Binding WidgetEventColor}" VerticalAlignment="Center" Visibility="{Binding WidgetIconVisibility}"/>
-        <views:EmojiTextBlock x:Name="WidgetTitle" EmojiText="{Binding WidgetTitle}" Style="{StaticResource EmojiText}" TextTrimming="CharacterEllipsis" FontSize="12" FontWeight="SemiBold" LineHeight="18" LineStackingStrategy="BlockLineHeight" VerticalAlignment="Center" Margin="6,0,5,0"/>
-        <TextBlock x:Name="WidgetTime" Text="{Binding WidgetTime}" Foreground="{StaticResource MutedBrush}" FontSize="11" LineHeight="17" LineStackingStrategy="BlockLineHeight" VerticalAlignment="Center"/>
-      </StackPanel>
+    <Border x:Name="WidgetSurface" Background="#01000000" BorderThickness="0" CornerRadius="4" Padding="0" SnapsToDevicePixels="True" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" SizeChanged="WidgetSurface_SizeChanged">
+      <Grid ClipToBounds="True">
+        <Border x:Name="ShineLayer" Width="72" HorizontalAlignment="Left" VerticalAlignment="Stretch" CornerRadius="4" Opacity="0" IsHitTestVisible="False">
+          <Border.RenderTransform><TranslateTransform x:Name="ShineTransform" X="-90"/></Border.RenderTransform>
+        </Border>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="9,4,10,5">
+          <Border Width="16" Height="16" CornerRadius="4" Background="{Binding WidgetEventColor}" VerticalAlignment="Center" Visibility="{Binding WidgetIconVisibility}"/>
+          <views:EmojiTextBlock x:Name="WidgetTitle" EmojiText="{Binding WidgetTitle}" Style="{StaticResource EmojiText}" TextTrimming="CharacterEllipsis" FontSize="12" FontWeight="SemiBold" LineHeight="18" LineStackingStrategy="BlockLineHeight" VerticalAlignment="Center" Margin="6,0,5,0"/>
+          <TextBlock x:Name="WidgetTime" Text="{Binding WidgetTime}" Foreground="{StaticResource MutedBrush}" FontSize="11" LineHeight="17" LineStackingStrategy="BlockLineHeight" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Grid>
     </Border>
   </Button>
 </Window>

@@ -2,10 +2,12 @@ using System;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Globalization;
 using Microsoft.Win32;
 using MeetingBar.Windows.Interop;
 using MeetingBar.Windows.Models;
+using MeetingBar.Windows.Services;
 using MeetingBar.Windows.ViewModels;
 
 namespace MeetingBar.Windows.Views
@@ -15,7 +17,11 @@ namespace MeetingBar.Windows.Views
         private readonly Action _clicked;
         private Brush _normalBackground;
         private Brush _hoverBackground;
+        private Brush _highlightBackground;
         private bool _isHovered;
+        private bool _isHighlighted;
+        private bool _shineRunning;
+        private double _shineDestination;
         public TaskbarWidgetWindow(MainViewModel vm, Action clicked)
         {
             InitializeComponent();
@@ -33,8 +39,10 @@ namespace MeetingBar.Windows.Views
             return IntPtr.Zero;
         }
         private void Widget_Click(object sender, RoutedEventArgs e) => _clicked();
-        private void Widget_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) { _isHovered = true; WidgetSurface.Background = _hoverBackground ?? _normalBackground; }
-        private void Widget_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e) { _isHovered = false; WidgetSurface.Background = _normalBackground; }
+        private void WidgetSurface_SizeChanged(object sender, SizeChangedEventArgs e) =>
+            WidgetSurface.Clip = new RectangleGeometry(new Rect(0, 0, Math.Max(0, e.NewSize.Width), Math.Max(0, e.NewSize.Height)), 4, 4);
+        private void Widget_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) { _isHovered = true; UpdateSurfaceBackground(); }
+        private void Widget_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e) { _isHovered = false; UpdateSurfaceBackground(); }
         public void ApplyPosition(AppSettings settings)
         {
             ApplyAppearance(settings);
@@ -79,11 +87,53 @@ namespace MeetingBar.Windows.Views
             _hoverBackground = settings.UseAutomaticWidgetColor
                 ? new SolidColorBrush(Color.FromArgb(14, foreground.R, foreground.G, foreground.B))
                 : new SolidColorBrush(Color.FromArgb(220, background.R, background.G, background.B));
-            WidgetSurface.Background = _isHovered ? _hoverBackground : _normalBackground;
+            var vm = DataContext as MainViewModel;
+            var eventColor = ParseColor(vm?.WidgetEventColor, Color.FromRgb(109, 124, 255));
+            _highlightBackground = settings.WidgetHighlightStyle == WidgetHighlightStyle.Hover
+                ? _hoverBackground
+                : settings.UseAutomaticWidgetColor
+                    ? new SolidColorBrush(Color.FromArgb(30, eventColor.R, eventColor.G, eventColor.B))
+                    : new SolidColorBrush(Color.FromArgb(225, Mix(background, eventColor, 0.16).R, Mix(background, eventColor, 0.16).G, Mix(background, eventColor, 0.16).B));
+            _isHighlighted = WidgetHighlightPolicy.ShouldHighlight(vm?.TaskbarEvent, settings, DateTime.Now);
+            if (_isHighlighted && settings.WidgetHighlightStyle == WidgetHighlightStyle.Shine) StartShine(foreground); else StopShine();
+            UpdateSurfaceBackground();
             WidgetSurface.BorderBrush = Brushes.Transparent;
             WidgetTitle.Foreground = new SolidColorBrush(foreground);
             WidgetTime.Foreground = new SolidColorBrush(muted);
         }
+
+        private void UpdateSurfaceBackground() => WidgetSurface.Background = _isHovered ? _hoverBackground : _isHighlighted ? _highlightBackground : _normalBackground;
+
+        private void StartShine(Color foreground)
+        {
+            var transparent = Color.FromArgb(0, foreground.R, foreground.G, foreground.B);
+            var peak = Color.FromArgb(46, foreground.R, foreground.G, foreground.B);
+            ShineLayer.Background = new LinearGradientBrush(new GradientStopCollection
+            {
+                new GradientStop(transparent, 0), new GradientStop(peak, 0.5), new GradientStop(transparent, 1)
+            }, new Point(0, 0.5), new Point(1, 0.5));
+            ShineLayer.Opacity = 1;
+            var destination = Math.Max(230, ActualWidth + 90);
+            if (_shineRunning && Math.Abs(_shineDestination - destination) < 1) return;
+            _shineRunning = true;
+            _shineDestination = destination;
+            var sweep = new DoubleAnimation(-90, destination, TimeSpan.FromMilliseconds(1750))
+            {
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            };
+            ShineTransform.BeginAnimation(TranslateTransform.XProperty, sweep, HandoffBehavior.SnapshotAndReplace);
+        }
+
+        private void StopShine()
+        {
+            if (!_shineRunning) { ShineLayer.Opacity = 0; return; }
+            _shineRunning = false;
+            ShineTransform.BeginAnimation(TranslateTransform.XProperty, null);
+            ShineTransform.X = -90;
+            ShineLayer.Opacity = 0;
+        }
+
         private static Color AutomaticTaskbarColor()
         {
             try

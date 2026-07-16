@@ -34,6 +34,7 @@ namespace MeetingBar.Tests
                 Equal(3, events.Count); Equal(new DateTime(2026, 7, 18, 10, 0, 0), events.Last().Start);
             });
             Test("defaults retain privacy-safe local provider", () => Equal(CalendarProviderKind.Outlook, new AppSettings().Provider));
+            Test("Win+W widget stays opt-in", () => Equal(false, new AppSettings().EnableWinWWidget));
             Test("requires Google Calendar read-only scope", () => { Equal(true, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/calendar.readonly")); Equal(false, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/userinfo.email")); });
             Test("explains disabled Google Calendar API", () => Contains("not enabled", GoogleCalendarProvider.ApiErrorMessage(System.Net.HttpStatusCode.Forbidden, "{\"error\":{\"errors\":[{\"reason\":\"accessNotConfigured\"}]}}")));
             Test("maps Google event-specific colors", () =>
@@ -52,6 +53,23 @@ namespace MeetingBar.Tests
                 var current = new CalendarEvent { Start = DateTime.Now.AddMinutes(-10), End = DateTime.Now.AddMinutes(25) };
                 var past = new CalendarEvent { Start = DateTime.Now.AddHours(-2), End = DateTime.Now.AddMinutes(-20) };
                 Contains("left", current.Remaining); Equal("Ended", past.Countdown); Contains("ago", past.DetailedCountdown);
+            });
+            Test("multiple notification times stay independent", () =>
+            {
+                var settings = new AppSettings { NotificationScheduleVersion = 1, NotificationMinutesBefore = new List<int> { 0, 5, 5, 15, -1, 121 } };
+                Equal("15,5,0", string.Join(",", NotificationService.ReminderOffsets(settings)));
+            });
+            Test("taskbar highlight respects start window and whole duration", () =>
+            {
+                var start = new DateTime(2026, 7, 16, 10, 0, 0);
+                var item = new CalendarEvent { Start = start, End = start.AddHours(1) };
+                var settings = new AppSettings { HighlightStartingMeetings = true, HighlightMinutesBefore = 5, HighlightMinutesAfterStart = 10 };
+                Equal(false, WidgetHighlightPolicy.ShouldHighlight(item, settings, start.AddMinutes(-6)));
+                Equal(true, WidgetHighlightPolicy.ShouldHighlight(item, settings, start.AddMinutes(-5)));
+                Equal(true, WidgetHighlightPolicy.ShouldHighlight(item, settings, start.AddMinutes(9)));
+                Equal(false, WidgetHighlightPolicy.ShouldHighlight(item, settings, start.AddMinutes(10)));
+                settings.HighlightWholeMeeting = true;
+                Equal(true, WidgetHighlightPolicy.ShouldHighlight(item, settings, start.AddMinutes(40)));
             });
             Test("event window hours respect day-boundary toggles", () =>
             {
@@ -108,6 +126,24 @@ namespace MeetingBar.Tests
                 var events = new[] { new CalendarEvent { Id = "free", Start = now.AddMinutes(5), End = now.AddMinutes(30), IsBusy = false }, new CalendarEvent { Id = "busy", Start = now.AddMinutes(10), End = now.AddMinutes(40), IsBusy = true } };
                 Equal("free", EventWindowPolicy.NextTaskbarEvent(events, false, now).Id);
                 Equal("busy", EventWindowPolicy.NextTaskbarEvent(events, true, now).Id);
+            });
+            Test("dismissed meetings stay in agendas but are muted elsewhere", () =>
+            {
+                var now = new DateTime(2026, 7, 16, 10, 0, 0);
+                var settings = new AppSettings { ShowFullDayEventList = true };
+                var dismissed = new CalendarEvent { Id = "dismissed", Start = now.AddMinutes(5), End = now.AddMinutes(35), IsDismissed = true };
+                var active = new CalendarEvent { Id = "active", Start = now.AddMinutes(10), End = now.AddMinutes(40) };
+                var events = new[] { dismissed, active };
+                Equal(true, EventWindowPolicy.Page(events, settings, 0, now).Any(x => x.Id == "dismissed"));
+                Equal("active", EventWindowPolicy.NextTaskbarEvent(events, false, now).Id);
+                Equal(false, NotificationService.IsNotificationEligible(dismissed, now));
+                Equal(false, EventWindowPolicy.CanDismiss(dismissed, now));
+                dismissed.IsDismissed = false;
+                Equal("dismissed", EventWindowPolicy.NextTaskbarEvent(events, false, now).Id);
+                Equal(true, NotificationService.IsNotificationEligible(dismissed, now));
+                var ended = new CalendarEvent { End = now.AddMinutes(-1), IsDismissed = true };
+                Equal(false, EventWindowPolicy.CanDismiss(ended, now));
+                Equal(true, EventWindowPolicy.ShouldRestoreDismissal(ended, now));
             });
             Test("unknown meeting services use the generic video fallback", () =>
             {

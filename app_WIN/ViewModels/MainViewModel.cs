@@ -24,7 +24,7 @@ namespace MeetingBar.Windows.ViewModels
         public ObservableCollection<CalendarEvent> PageEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<CalendarEvent> TimelineEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<Bookmark> Bookmarks { get; } = new ObservableCollection<Bookmark>();
-        public CalendarEvent NextEvent => Events.FirstOrDefault(x => x.End > DateTime.Now);
+        public CalendarEvent NextEvent => Events.FirstOrDefault(x => x.End > DateTime.Now && !x.IsDismissed);
         public CalendarEvent TaskbarEvent => EventWindowPolicy.NextTaskbarEvent(Events, _settings.Current.IgnoreFreeEventsInTaskbar, DateTime.Now);
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
         public bool IsRefreshing { get => _isRefreshing; set => Set(ref _isRefreshing, value); }
@@ -66,6 +66,7 @@ namespace MeetingBar.Windows.ViewModels
         public ICommand OpenMapCommand { get; }
         public ICommand CopyMeetingLinkCommand { get; }
         public ICommand DismissEventCommand { get; }
+        public ICommand RestoreEventCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand CreateMeetingCommand { get; }
         public ICommand OpenCalendarCommand { get; }
@@ -78,14 +79,15 @@ namespace MeetingBar.Windows.ViewModels
             OpenEventCommand = new RelayCommand(OpenEventInCalendar, CanOpenEventInCalendar);
             OpenMapCommand = new RelayCommand(x => { var item = x as CalendarEvent; _opener.Open(MapLinkService.BuildUrl(_settings.Current.MapProvider, item?.Location)); }, x => MapLinkService.HasPhysicalLocation((x as CalendarEvent)?.Location));
             CopyMeetingLinkCommand = new RelayCommand(x => { var item = x as CalendarEvent; if (item?.CanJoin == true) try { Clipboard.SetText(item.MeetingUrl); } catch { } }, x => (x as CalendarEvent)?.CanJoin == true);
-            DismissEventCommand = new RelayCommand(x => _sync.DismissEvent(x as CalendarEvent), x => x is CalendarEvent);
+            DismissEventCommand = new RelayCommand(x => _sync.DismissEvent(x as CalendarEvent), x => EventWindowPolicy.CanDismiss(x as CalendarEvent, DateTime.Now));
+            RestoreEventCommand = new RelayCommand(x => _sync.RestoreEvent(x as CalendarEvent), x => (x as CalendarEvent)?.CanRestoreNotifications == true);
             RefreshCommand = new RelayCommand(async () => await Refresh());
             CreateMeetingCommand = new RelayCommand(() => _opener.Open(_settings.Current.CreateMeetingUrl));
             OpenCalendarCommand = new RelayCommand(OpenCalendar, () => CanOpenCalendar);
             OpenBookmarkCommand = new RelayCommand(x => _opener.Open((x as Bookmark)?.Url));
             _sync.Changed += SyncChanged;
             _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
-            _clock.Tick += (s, e) => { foreach (var item in TimelineEvents) item.RefreshComputed(); RaiseComputed(); };
+            _clock.Tick += (s, e) => { _sync.RestoreExpiredDismissals(DateTime.Now); foreach (var item in TimelineEvents) item.RefreshComputed(); RaiseComputed(); };
             _clock.Start(); Rebuild();
         }
         public bool CanOpenCalendar => _settings.Current.Provider != CalendarProviderKind.Ics || !string.IsNullOrWhiteSpace(NextEvent?.CalendarOpenUrl);

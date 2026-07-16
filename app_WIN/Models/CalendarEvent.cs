@@ -36,6 +36,7 @@ namespace MeetingBar.Windows.Models
         public bool IsCurrent => Start <= DateTime.Now && End > DateTime.Now;
         public bool IsPast => End <= DateTime.Now;
         public bool CanJoin => !string.IsNullOrWhiteSpace(MeetingUrl);
+        public bool CanRestoreNotifications => IsDismissed && !IsPast;
         public bool CanOpenDetails => !string.IsNullOrWhiteSpace(CalendarOpenUrl);
         public string StartTimeText => FormatTime(Start, Use24HourClock);
         public string TimeRange => IsAllDay ? "All day" : FormatTime(Start, Use24HourClock) + " – " + FormatTime(End, Use24HourClock);

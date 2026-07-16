@@ -19,15 +19,16 @@ public sealed partial class MainWindow : Window
     private string _page = "";
     private string _stateSignature = "";
 
-    private ComboBox? _widgetMode, _titleMode, _timeMode, _provider, _timelineDateFormat, _mapProvider;
+    private ComboBox? _widgetMode, _titleMode, _timeMode, _highlightStyle, _provider, _timelineDateFormat, _mapProvider;
     private Slider? _widgetWidth;
-    private NumberBox? _offsetX, _offsetY, _titleLength, _refreshMinutes, _notifyBefore, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours, _timelinePastDays, _timelineFutureDays;
+    private NumberBox? _offsetX, _offsetY, _titleLength, _highlightBefore, _highlightAfter, _refreshMinutes, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours, _timelinePastDays, _timelineFutureDays;
     private TextBox? _widgetColor, _icsSources, _googleClientId, _browserPath, _browserArgs, _createUrl, _debugTitle, _debugColor;
     private PasswordBox? _googleClientSecret;
-    private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _allDay, _declined, _tentative, _free, _ignoreFreeTaskbar, _requireLink, _includePastDay, _includeNextDay, _fullDayEventList, _use24HourClock, _showTimelineDate;
+    private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _winWWidget, _highlightMeetings, _highlightWholeMeeting, _allDay, _declined, _tentative, _free, _ignoreFreeTaskbar, _requireLink, _includePastDay, _includeNextDay, _fullDayEventList, _use24HourClock, _showTimelineDate;
     private ToggleSwitch? _notify, _fullScreen, _notifyEnd, _autoJoin, _hotkey, _startWithWindows;
     private InfoBar? _googleStatus;
     private ComboBox? _debugService;
+    private readonly Dictionary<int, CheckBox> _notificationChecks = new();
     private NumberBox? _debugStartMinutes, _debugDurationMinutes;
     private InfoBar? _debugStatus;
 
@@ -198,6 +199,22 @@ public sealed partial class MainWindow : Window
         AddCard("Maximum title length", "Longer event names are shortened at this character count.", _titleLength);
         _showIcon = Toggle(_settings.ShowServiceIcon);
         AddCard("Colored event icon", "Show the event-colored square beside the title.", _showIcon);
+
+        AddSection("Starting meeting highlight");
+        _highlightMeetings = Toggle(_settings.HighlightStartingMeetings);
+        AddCard("Highlight starting meetings", "Keep the taskbar widget visibly active around the meeting start.", _highlightMeetings);
+        _highlightBefore = Number(_settings.HighlightMinutesBefore, 0, 60);
+        AddCard("Start highlighting before", "Minutes before the scheduled start.", _highlightBefore);
+        _highlightAfter = Number(_settings.HighlightMinutesAfterStart, 1, 120);
+        AddCard("Initial meeting highlight", "Minutes after the scheduled start when whole-meeting highlighting is off.", _highlightAfter);
+        _highlightWholeMeeting = Toggle(_settings.HighlightWholeMeeting);
+        AddCard("Highlight whole meeting", "Keep the active state until the scheduled meeting ends.", _highlightWholeMeeting);
+        _highlightStyle = Choice(new[] { "Same as hover", "Animated shine" }, (int)_settings.WidgetHighlightStyle);
+        AddCard("Highlight style", "Use the native hover surface or a subtle in-progress sweep.", _highlightStyle);
+
+        AddSection("Windows Widgets Board (beta)");
+        _winWWidget = Toggle(_settings.EnableWinWWidget);
+        AddCard("Win+W widget", "Register MeetingBar in the native Windows 11 widget picker. After saving, press Win+W, choose Add widgets, then pin MeetingBar. Developer Mode is required by this portable package.", _winWWidget);
     }
 
     private void BuildEventsPage()
@@ -230,8 +247,18 @@ public sealed partial class MainWindow : Window
     {
         AddHeader("Reminders", "Choose when MeetingBar alerts or joins for you.", "\uEA8F");
         AddSection("Notifications");
-        _notify = Toggle(_settings.NotifyBeforeMeeting); AddCard("Notify before meetings", "Show a Windows notification before an event starts.", _notify);
-        _notifyBefore = Number(_settings.NotifyMinutesBefore, 0, 120); AddCard("Notification lead time", "Minutes before the meeting starts.", _notifyBefore);
+        _notify = Toggle(_settings.NotifyBeforeMeeting); AddCard("Meeting notifications", "Show Windows notifications at every selected time.", _notify);
+        _notificationChecks.Clear();
+        IEnumerable<int> configured = _settings.NotificationScheduleVersion < 1 ? new[] { _settings.NotifyMinutesBefore } : _settings.NotificationMinutesBefore ?? new List<int>();
+        var notificationTimes = new[] { 60, 30, 15, 10, 5, 0 }.Concat(configured).Where(x => x >= 0 && x <= 120).Distinct().OrderByDescending(x => x);
+        var notificationChoices = new StackPanel { Spacing = 6, HorizontalAlignment = HorizontalAlignment.Right };
+        foreach (var minutes in notificationTimes)
+        {
+            var choice = new CheckBox { Content = minutes == 0 ? "At meeting start" : minutes + " minutes before", IsChecked = configured?.Contains(minutes) == true, HorizontalAlignment = HorizontalAlignment.Right };
+            _notificationChecks[minutes] = choice;
+            notificationChoices.Children.Add(choice);
+        }
+        AddCard("Notification times", "Select multiple reminders, for example 5 minutes before and at meeting start.", notificationChoices);
         _fullScreen = Toggle(_settings.FullscreenReminder); AddCard("Full-screen reminder", "Show a prominent meeting reminder with a join action.", _fullScreen);
         _notifyEnd = Toggle(_settings.NotifyAtEnd); AddCard("Meeting-end notification", "Notify when the scheduled meeting time ends.", _notifyEnd);
         AddSection("Automation");
@@ -489,12 +516,15 @@ public sealed partial class MainWindow : Window
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         CaptureCurrentPage();
+        var widgetRegistrationCompleted = false;
         try
         {
             SettingsStore.Save(_settings);
+            var widgetStatus = await WinWWidgetRegistration.ApplyAsync(_settings.EnableWinWWidget);
+            widgetRegistrationCompleted = true;
             await SettingsStore.SendCommandAsync("reload");
             SaveStatus.Severity = InfoBarSeverity.Success;
-            SaveStatus.Message = "Settings saved and reloaded";
+            SaveStatus.Message = string.IsNullOrWhiteSpace(widgetStatus) ? "Settings saved and reloaded" : widgetStatus;
             SaveStatus.IsOpen = true;
             var hide = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.2) };
             hide.Tick += (_, _) => { hide.Stop(); SaveStatus.IsOpen = false; };
@@ -502,6 +532,13 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception error)
         {
+            if (_settings.EnableWinWWidget && !widgetRegistrationCompleted)
+            {
+                _settings.EnableWinWWidget = false;
+                if (_winWWidget != null) _winWWidget.IsOn = false;
+                SettingsStore.Save(_settings);
+                try { await SettingsStore.SendCommandAsync("reload"); } catch { }
+            }
             SaveStatus.Severity = InfoBarSeverity.Error;
             SaveStatus.Message = "Could not reload MeetingBar: " + error.Message;
             SaveStatus.IsOpen = true;
@@ -524,6 +561,12 @@ public sealed partial class MainWindow : Window
                 if (_ongoingTime != null) _settings.ShowOngoingTimeRemaining = _ongoingTime.IsOn;
                 if (_titleLength != null) _settings.TitleMaxLength = (int)Finite(_titleLength.Value, 64);
                 if (_showIcon != null) _settings.ShowServiceIcon = _showIcon.IsOn;
+                if (_highlightMeetings != null) _settings.HighlightStartingMeetings = _highlightMeetings.IsOn;
+                if (_highlightBefore != null) _settings.HighlightMinutesBefore = (int)Finite(_highlightBefore.Value, 5);
+                if (_highlightAfter != null) _settings.HighlightMinutesAfterStart = (int)Finite(_highlightAfter.Value, 10);
+                if (_highlightWholeMeeting != null) _settings.HighlightWholeMeeting = _highlightWholeMeeting.IsOn;
+                if (_highlightStyle != null) _settings.WidgetHighlightStyle = (WidgetHighlightStyle)Math.Max(0, _highlightStyle.SelectedIndex);
+                if (_winWWidget != null) _settings.EnableWinWWidget = _winWWidget.IsOn;
                 break;
             case "Calendars":
                 if (_provider != null) _settings.Provider = (CalendarProviderKind)Math.Max(0, _provider.SelectedIndex);
@@ -561,7 +604,9 @@ public sealed partial class MainWindow : Window
                 break;
             case "Reminders":
                 if (_notify != null) _settings.NotifyBeforeMeeting = _notify.IsOn;
-                if (_notifyBefore != null) _settings.NotifyMinutesBefore = (int)Finite(_notifyBefore.Value, 5);
+                _settings.NotificationMinutesBefore = _notificationChecks.Where(x => x.Value.IsChecked == true).Select(x => x.Key).OrderByDescending(x => x).ToList();
+                _settings.NotifyMinutesBefore = _settings.NotificationMinutesBefore.FirstOrDefault();
+                _settings.NotificationScheduleVersion = 1;
                 if (_fullScreen != null) _settings.FullscreenReminder = _fullScreen.IsOn;
                 if (_notifyEnd != null) _settings.NotifyAtEnd = _notifyEnd.IsOn;
                 if (_autoJoin != null) _settings.AutoJoin = _autoJoin.IsOn;

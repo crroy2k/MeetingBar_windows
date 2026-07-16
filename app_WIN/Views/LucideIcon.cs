@@ -5,7 +5,7 @@ using System.Windows.Media;
 
 namespace MeetingBar.Windows.Views
 {
-    public enum LucideIconKind { CalendarDays, RefreshCw, SlidersHorizontal, Video, Plus, Copy, ExternalLink, Map, CircleX }
+    public enum LucideIconKind { CalendarDays, RefreshCw, SlidersHorizontal, Video, Plus, Copy, ExternalLink, Map, CircleX, VolumeX, VolumeOff }
 
     public sealed class LucideIcon : FrameworkElement
     {
@@ -21,7 +21,9 @@ namespace MeetingBar.Windows.Views
             [LucideIconKind.Copy] = new[] { "M9,9 H19 A2,2 0 0 1 21,11 V19 A2,2 0 0 1 19,21 H11 A2,2 0 0 1 9,19 Z", "M5,15 H4 A2,2 0 0 1 2,13 V4 A2,2 0 0 1 4,2 H13 A2,2 0 0 1 15,4 V5" },
             [LucideIconKind.ExternalLink] = new[] { "M15,3 H21 V9", "M10,14 L21,3", "M18,13 V19 A2,2 0 0 1 16,21 H5 A2,2 0 0 1 3,19 V8 A2,2 0 0 1 5,6 H11" },
             [LucideIconKind.Map] = new[] { "M3,6 L9,3 L15,6 L21,3 V18 L15,21 L9,18 L3,21 Z", "M9,3 V18", "M15,6 V21" },
-            [LucideIconKind.CircleX] = new[] { "M21,12 A9,9 0 1 1 3,12 A9,9 0 1 1 21,12", "M9,9 L15,15", "M15,9 L9,15" }
+            [LucideIconKind.CircleX] = new[] { "M21,12 A9,9 0 1 1 3,12 A9,9 0 1 1 21,12", "M9,9 L15,15", "M15,9 L9,15" },
+            [LucideIconKind.VolumeX] = new[] { "M11,5 L6,9 H2 V15 H6 L11,19 Z", "M22,9 L16,15", "M16,9 L22,15" },
+            [LucideIconKind.VolumeOff] = new[] { "M11,5 L6,9 H2 V15 H6 L11,19 Z", "M3,3 L21,21" }
         };
 
         public LucideIconKind Kind { get => (LucideIconKind)GetValue(KindProperty); set => SetValue(KindProperty, value); }

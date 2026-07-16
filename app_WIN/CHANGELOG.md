@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Keep dismissed meetings visible in expanded and Win+W agendas while excluding them from taskbar/current surfaces, notifications, and auto-join; use volume-off indicators with an inline unmute action, prevent muting ended events, and restore them automatically at meeting end.
+- Add selectable multi-point meeting notifications, including meeting start, and configurable taskbar active states with native-hover or animated-shine styling.
+- Add an optional native Windows 11 Win+W provider with current/next meeting, today's agenda, live countdowns, meeting colors, and Join/Open/Refresh actions.
 - Add native Windows MeetingBar with tray, near-tray, and far-left taskbar surfaces.
 - Add Classic Outlook, ICS, and direct Google Calendar providers.
 - Add meeting detection, popup, filters, reminders, auto-join, bookmarks, startup, hotkey, and launcher commands.

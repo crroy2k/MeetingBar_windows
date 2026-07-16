@@ -52,7 +52,7 @@ namespace MeetingBar.Windows.Services
                 {
                     var meeting = MeetingLinkDetector.Detect(item, _settings.Current.CustomMeetingRegexes);
                     if (meeting != null) { item.MeetingUrl = meeting.Url; item.MeetingService = meeting.Service; }
-                    item.IsDismissed = _settings.Current.DismissedEventIds.Contains(item.Id);
+                    item.IsDismissed = item.End > now && _settings.Current.DismissedEventIds.Contains(item.Id);
                 }
                 var activeIds = new HashSet<string>(result.Item2.Where(x => x.End > now).Select(x => x.Id));
                 if (_settings.Current.DismissedEventIds.RemoveAll(id => !activeIds.Contains(id)) > 0) _settings.Save();
@@ -94,7 +94,7 @@ namespace MeetingBar.Windows.Services
             var s = _settings.Current;
             foreach (var item in events.OrderBy(x => x.Start))
             {
-                if (item.IsCancelled || item.IsDismissed) continue;
+                if (item.IsCancelled) continue;
                 if (!s.ShowAllDayEvents && item.IsAllDay) continue;
                 if (!s.ShowDeclinedEvents && item.IsDeclined) continue;
                 if (!s.ShowTentativeEvents && item.IsTentative) continue;
@@ -124,13 +124,33 @@ namespace MeetingBar.Windows.Services
 
         public void DismissEvent(CalendarEvent item)
         {
-            if (item == null || string.IsNullOrWhiteSpace(item.Id)) return;
+            if (!EventWindowPolicy.CanDismiss(item, DateTime.Now) || string.IsNullOrWhiteSpace(item.Id)) return;
             if (!_settings.Current.DismissedEventIds.Contains(item.Id))
             {
                 _settings.Current.DismissedEventIds.Add(item.Id);
                 _settings.Save();
             }
             item.IsDismissed = true;
+            RebuildViews();
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void RestoreExpiredDismissals(DateTime now)
+        {
+            var expired = _lastGoodEvents.Concat(_debugEvents).Where(item => EventWindowPolicy.ShouldRestoreDismissal(item, now)).ToList();
+            if (expired.Count == 0) return;
+            foreach (var item in expired) item.IsDismissed = false;
+            var ids = new HashSet<string>(expired.Select(item => item.Id));
+            if (_settings.Current.DismissedEventIds.RemoveAll(ids.Contains) > 0) _settings.Save();
+            RebuildViews();
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void RestoreEvent(CalendarEvent item)
+        {
+            if (item == null || string.IsNullOrWhiteSpace(item.Id)) return;
+            if (_settings.Current.DismissedEventIds.Remove(item.Id)) _settings.Save();
+            item.IsDismissed = false;
             RebuildViews();
             Changed?.Invoke(this, EventArgs.Empty);
         }

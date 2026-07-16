@@ -50,6 +50,8 @@ namespace MeetingBar.Windows.Views
             OpenLocationButton.Visibility = MapLinkService.HasPhysicalLocation(item.Location) ? Visibility.Visible : Visibility.Collapsed;
             CopyLinkButton.Visibility = item.CanJoin ? Visibility.Visible : Visibility.Collapsed;
             OpenCalendarButton.IsEnabled = _viewModel.OpenEventCommand.CanExecute(item);
+            MutedIcon.Visibility = item.CanRestoreNotifications ? Visibility.Visible : Visibility.Collapsed;
+            DismissButton.Visibility = item.IsDismissed || item.IsPast ? Visibility.Collapsed : Visibility.Visible;
 
             var work = SystemParameters.WorkArea;
             DetailsScroll.MaxHeight = Math.Max(180, work.Height - 190);
@@ -78,6 +80,7 @@ namespace MeetingBar.Windows.Views
             AddRow("Time", item.TimeRange);
             AddRow("Status", item.IsCurrent ? "Ongoing · " + item.Remaining : item.DetailedCountdown);
             AddRow("Availability", item.IsBusy ? "Busy" : "Free");
+            if (item.CanRestoreNotifications) AddRow("Notifications", "Muted");
             if (item.IsDeclined) AddRow("Response", "Declined"); else if (item.IsTentative) AddRow("Response", "Tentative");
             AddRow("Calendar", item.CalendarName);
             AddRow("Organizer", item.Organizer);

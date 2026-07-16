@@ -35,12 +35,13 @@
     <Grid>
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
       <Grid>
-        <Grid.ColumnDefinitions><ColumnDefinition Width="4"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="4"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <Border Background="{Binding CalendarColor}" CornerRadius="2" Margin="0,1,0,1"/>
         <StackPanel Grid.Column="1" Margin="12,0,0,0">
           <views:EmojiTextBlock EmojiText="{Binding Title}" Style="{StaticResource EmojiText}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
           <TextBlock x:Name="SummaryText" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,5,0,0" TextWrapping="Wrap"/>
         </StackPanel>
+        <views:LucideIcon x:Name="MutedIcon" Grid.Column="2" Kind="VolumeOff" Stroke="{StaticResource MutedBrush}" Width="16" Height="16" Margin="10,1,0,0" VerticalAlignment="Top" Visibility="Collapsed" AutomationProperties.Name="Meeting notifications muted"/>
       </Grid>
 
       <views:AutoHideScrollViewer x:Name="DetailsScroll" Grid.Row="1" Margin="0,14,0,14">
@@ -66,8 +67,8 @@
             <views:LucideIcon Kind="ExternalLink" Stroke="{StaticResource InkBrush}" Width="17" Height="17"/>
           </Button>
         </StackPanel>
-        <Button Grid.Column="1" Style="{StaticResource DangerIconButton}" Click="Dismiss_Click" Padding="8" AutomationProperties.Name="Dismiss meeting">
-          <views:LucideIcon Kind="CircleX" Stroke="#FFFF5A5F" Width="17" Height="17"/>
+        <Button x:Name="DismissButton" Grid.Column="1" Style="{StaticResource DangerIconButton}" Click="Dismiss_Click" Padding="8" AutomationProperties.Name="Dismiss meeting">
+          <views:LucideIcon Kind="VolumeOff" Stroke="#FFFF5A5F" Width="17" Height="17"/>
         </Button>
       </Grid>
     </Grid>

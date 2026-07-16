@@ -36,13 +36,16 @@ namespace MeetingBar.Windows.Services
         private void Check()
         {
             var now = DateTime.Now; var settings = _settings.Current;
-            foreach (var item in (_events?.Invoke() ?? new List<CalendarEvent>()).Where(x => x.End > now))
+            foreach (var item in (_events?.Invoke() ?? new List<CalendarEvent>()).Where(x => IsNotificationEligible(x, now)))
             {
-                var notifyAt = item.Start.AddMinutes(-settings.NotifyMinutesBefore);
-                if (settings.NotifyBeforeMeeting && now >= notifyAt && now < notifyAt.AddMinutes(1) && _sent.Add(item.Id + ":start"))
+                foreach (var minutesBefore in ReminderOffsets(settings))
                 {
+                    var notifyAt = item.Start.AddMinutes(-minutesBefore);
+                    if (settings.NotifyBeforeMeeting && now >= notifyAt && now < notifyAt.AddMinutes(1) && _sent.Add(item.Id + ":start:" + minutesBefore))
+                    {
                     _tray.BalloonTipTitle = item.Title; _tray.BalloonTipText = item.CanJoin ? item.Countdown + " • Click MeetingBar to join" : item.Countdown; _tray.ShowBalloonTip(7000);
                     if (settings.FullscreenReminder) new ReminderWindow(item, () => _opener.Open(item)).Show();
+                    }
                 }
                 if (settings.AutoJoin && item.CanJoin && now >= item.Start.AddMinutes(-settings.AutoJoinMinutesBefore) && now < item.Start.AddMinutes(-settings.AutoJoinMinutesBefore).AddMinutes(1) && _sent.Add(item.Id + ":auto")) _opener.Open(item);
                 if (settings.NotifyAtEnd && now >= item.End && now < item.End.AddMinutes(1) && _sent.Add(item.Id + ":end"))
@@ -50,6 +53,14 @@ namespace MeetingBar.Windows.Services
             }
             _sent.RemoveWhere(id => !(_events?.Invoke() ?? new List<CalendarEvent>()).Any(x => id.StartsWith(x.Id + ":")));
         }
+        public static IReadOnlyList<int> ReminderOffsets(AppSettings settings)
+        {
+            IEnumerable<int> values = settings.NotificationScheduleVersion < 1
+                ? new[] { settings.NotifyMinutesBefore }
+                : settings.NotificationMinutesBefore ?? new List<int>();
+            return values.Where(x => x >= 0 && x <= 120).Distinct().OrderByDescending(x => x).ToList();
+        }
+        public static bool IsNotificationEligible(CalendarEvent item, DateTime now) => item != null && !item.IsDismissed && item.End > now.AddMinutes(-1);
         public void Dispose() => _timer.Stop();
     }
 }

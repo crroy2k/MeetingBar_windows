@@ -13,3 +13,5 @@ Interface icon geometry is derived from [Lucide](https://lucide.dev/), copyright
 ## Microsoft Windows App SDK and .NET
 
 The portable WinUI settings host includes Microsoft Windows App SDK 2.2 and the Microsoft .NET 8 runtime. Both are distributed under the MIT License. Microsoft does not endorse this application.
+
+The Win+W provider's out-of-process COM registration follows the Microsoft WindowsAppSDK-Samples widget pattern, which is distributed under the MIT License.

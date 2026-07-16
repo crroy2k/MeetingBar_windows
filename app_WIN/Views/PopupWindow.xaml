@@ -49,9 +49,14 @@
                     <views:EmojiTextBlock EmojiText="{Binding Title}" Style="{StaticResource EmojiText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                     <TextBlock Text="{Binding CalendarName}" Foreground="{StaticResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                   </StackPanel>
-                  <Button Grid.Column="3" Command="{Binding DataContext.JoinCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding CanJoin, Converter={StaticResource BooleanVisibility}}" Padding="7" Margin="6,5,0,5">
-                    <Grid Width="18" Height="18"><Image Source="{Binding MeetingService, Converter={StaticResource MeetingServiceIcon}}" Stretch="Uniform"/><views:LucideIcon Kind="Video" Stroke="{StaticResource InkBrush}" Visibility="{Binding MeetingService, Converter={StaticResource UnknownMeetingServiceVisibility}}"/></Grid>
-                  </Button>
+                  <StackPanel Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Command="{Binding DataContext.RestoreEventCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding CanRestoreNotifications, Converter={StaticResource BooleanVisibility}}" Padding="7" Margin="6,5,0,5" AutomationProperties.Name="Restore meeting notifications">
+                      <views:LucideIcon Kind="VolumeOff" Stroke="{StaticResource MutedBrush}" Width="18" Height="18"/>
+                    </Button>
+                    <Button Command="{Binding DataContext.JoinCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding CanJoin, Converter={StaticResource BooleanVisibility}}" Padding="7" Margin="6,5,0,5">
+                      <Grid Width="18" Height="18"><Image Source="{Binding MeetingService, Converter={StaticResource MeetingServiceIcon}}" Stretch="Uniform"/><views:LucideIcon Kind="Video" Stroke="{StaticResource InkBrush}" Visibility="{Binding MeetingService, Converter={StaticResource UnknownMeetingServiceVisibility}}"/></Grid>
+                    </Button>
+                  </StackPanel>
                 </Grid>
                 </StackPanel>
               </DataTemplate>

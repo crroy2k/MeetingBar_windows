@@ -82,6 +82,8 @@
     <Compile Include="Services\MapLinkService.cs" />
     <Compile Include="Services\NotificationService.cs" />
     <Compile Include="Services\StartupService.cs" />
+    <Compile Include="Services\WidgetHighlightPolicy.cs" />
+    <Compile Include="Services\WinWWidgetStateService.cs" />
     <Compile Include="Services\AppController.cs" />
     <Compile Include="Services\AppLog.cs" />
     <Compile Include="Interop\NativeMethods.cs" />
