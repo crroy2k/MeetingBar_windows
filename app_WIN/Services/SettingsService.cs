@@ -18,6 +18,13 @@ namespace MeetingBar.Windows.Services
             Directory.CreateDirectory(folder);
             SettingsPath = Path.Combine(folder, "settings.json");
             Current = Load();
+            if (Current.WidgetSettingsVersion < 1)
+            {
+                if (Current.WidgetWidth <= 300) Current.WidgetWidth = 500;
+                if (Current.TitleMaxLength <= 36) Current.TitleMaxLength = 64;
+                Current.WidgetSettingsVersion = 1;
+                Save();
+            }
         }
 
         private AppSettings Load()

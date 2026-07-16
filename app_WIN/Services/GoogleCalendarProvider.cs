@@ -71,6 +71,9 @@ namespace MeetingBar.Windows.Services
         public async Task<Tuple<List<CalendarInfo>, List<CalendarEvent>>> FetchAsync(AppSettings settings, DateTime from, DateTime to)
         {
             var access = await AccessToken(settings);
+            var eventColors = new Dictionary<string, string>();
+            try { eventColors = ParseEventColors(await GetJson("https://www.googleapis.com/calendar/v3/colors", access)); }
+            catch { }
             var calendarsJson = await GetJson("https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=250", access);
             var calendars = Items(calendarsJson).Select(x => new CalendarInfo { Id = Value(x, "id"), Name = Value(x, "summary"), Source = "Google", Color = Value(x, "backgroundColor") ?? "#6D7CFF" }).ToList();
             var events = new List<CalendarEvent>();
@@ -88,7 +91,7 @@ namespace MeetingBar.Windows.Services
                     {
                         Id = Value(raw, "id"), Title = Value(raw, "summary") ?? "Untitled event", Notes = Value(raw, "description"), Location = Value(raw, "location"),
                         CalendarOpenUrl = Value(raw, "htmlLink"), ConferenceUrl = ConferenceUrl(raw) ?? Value(raw, "hangoutLink"), CalendarId = calendar.Id, CalendarName = calendar.Name,
-                        CalendarColor = Value(raw, "colorId") ?? calendar.Color, Organizer = NestedValue(raw, "organizer", "email"), Start = start, End = end,
+                        CalendarColor = ResolveEventColor(Value(raw, "colorId"), eventColors, calendar.Color), Organizer = NestedValue(raw, "organizer", "email"), Start = start, End = end,
                         IsAllDay = NestedValue(raw, "start", "date") != null, IsDeclined = response == "declined", IsTentative = response == "tentative" || response == "needsAction",
                         IsCancelled = Value(raw, "status") == "cancelled", IsBusy = Value(raw, "transparency") != "transparent"
                     };
@@ -155,6 +158,23 @@ namespace MeetingBar.Windows.Services
                 default:
                     return "Google Calendar error: " + status;
             }
+        }
+        internal static Dictionary<string, string> ParseEventColors(Dictionary<string, object> root)
+        {
+            var result = new Dictionary<string, string>();
+            var colors = root != null && root.ContainsKey("event") ? root["event"] as Dictionary<string, object> : null;
+            if (colors == null) return result;
+            foreach (var pair in colors)
+            {
+                var value = Value(pair.Value as Dictionary<string, object>, "background");
+                if (!string.IsNullOrWhiteSpace(value)) result[pair.Key] = value;
+            }
+            return result;
+        }
+        internal static string ResolveEventColor(string colorId, Dictionary<string, string> eventColors, string fallback)
+        {
+            string value;
+            return !string.IsNullOrWhiteSpace(colorId) && eventColors != null && eventColors.TryGetValue(colorId, out value) ? value : fallback;
         }
         private async Task<string> GetEmail(string token) { var json = await GetJson("https://www.googleapis.com/oauth2/v2/userinfo", token); return Value(json, "email"); }
         private static IEnumerable<Dictionary<string, object>> Items(Dictionary<string, object> x) => x.ContainsKey("items") ? ((IEnumerable)x["items"]).Cast<object>().OfType<Dictionary<string, object>>() : Enumerable.Empty<Dictionary<string, object>>();

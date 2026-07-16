@@ -48,7 +48,7 @@ namespace MeetingBar.Windows.ViewModels
         {
             Settings.SelectedCalendarIds = Calendars.Where(x => x.Selected).Select(x => x.Id).ToList();
             Settings.Bookmarks = Bookmarks.Where(x => !string.IsNullOrWhiteSpace(x.Name) && Uri.IsWellFormedUriString(x.Url, UriKind.Absolute)).ToList();
-            StartupService.SetEnabled(Settings.StartWithWindows); _service.Replace(Settings); _saved(); window?.Close();
+            StartupService.SetEnabled(Settings.StartWithWindows); _service.Replace(Settings); _saved();
         }
         private async Task ConnectGoogle()
         {

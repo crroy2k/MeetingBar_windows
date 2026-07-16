@@ -3,6 +3,8 @@ using System.Threading;
 using System.IO;
 using System.IO.Pipes;
 using System.Windows;
+using System.Windows.Media;
+using MeetingBar.Windows.Interop;
 using MeetingBar.Windows.Services;
 
 namespace MeetingBar.Windows
@@ -18,6 +20,7 @@ namespace MeetingBar.Windows
             _singleInstance = new Mutex(true, "Local\\MeetingBar.Windows", out created);
             if (!created) { SendCommand(e.Args.Length == 0 ? "popup" : e.Args[0].TrimStart('-')); Shutdown(); return; }
             base.OnStartup(e);
+            ApplyWindowsAccent();
             AppDomain.CurrentDomain.UnhandledException += (s, args) => AppLog.Error("Unhandled", args.ExceptionObject as Exception ?? new Exception("Unknown fatal error"));
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, args) => { AppLog.Error("Task", args.Exception); args.SetObserved(); };
             DispatcherUnhandledException += (s, args) =>
@@ -30,6 +33,19 @@ namespace MeetingBar.Windows
             AppLog.Info("Application started");
             _controller.Start();
             if (e.Args.Length > 0) _controller.ExecuteCommand(e.Args[0].TrimStart('-'));
+        }
+
+        internal static void ApplyWindowsAccent()
+        {
+            try
+            {
+                uint value; bool opaque;
+                if (NativeMethods.DwmGetColorizationColor(out value, out opaque) != 0) return;
+                var color = Color.FromRgb((byte)(value >> 16), (byte)(value >> 8), (byte)value);
+                Current.Resources["Accent"] = color;
+                Current.Resources["AccentBrush"] = new SolidColorBrush(color);
+            }
+            catch { }
         }
 
         private static void SendCommand(string command)

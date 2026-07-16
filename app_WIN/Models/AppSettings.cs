@@ -10,12 +10,16 @@ namespace MeetingBar.Windows.Models
     public sealed class AppSettings
     {
         public WidgetMode WidgetMode { get; set; } = WidgetMode.NearTray;
-        public double WidgetWidth { get; set; } = 300;
+        public double WidgetWidth { get; set; } = 500;
         public double WidgetOffsetX { get; set; }
         public double WidgetOffsetY { get; set; }
+        public bool UseAutomaticWidgetColor { get; set; } = true;
+        public string WidgetBackgroundColor { get; set; } = "#202020";
+        public int WidgetSettingsVersion { get; set; }
         public TitleMode TitleMode { get; set; } = TitleMode.Full;
         public TimeMode TimeMode { get; set; } = TimeMode.Countdown;
-        public int TitleMaxLength { get; set; } = 36;
+        public bool ShowOngoingTimeRemaining { get; set; } = true;
+        public int TitleMaxLength { get; set; } = 64;
         public bool ShowServiceIcon { get; set; } = true;
         public bool ShowAllDayEvents { get; set; } = true;
         public bool ShowDeclinedEvents { get; set; }

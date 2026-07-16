@@ -33,7 +33,8 @@ if ($Package) {
     New-Item -ItemType Directory -Force $stage | Out-Null
     Copy-Item (Join-Path $root "bin\$Configuration\MeetingBar.exe") (Join-Path $stage "MeetingBar.exe") -Force
     Copy-Item (Join-Path $root "README.md") (Join-Path $stage "README.md") -Force
+    Copy-Item (Join-Path $root "THIRD-PARTY-NOTICES.md") (Join-Path $stage "THIRD-PARTY-NOTICES.md") -Force
     Copy-Item (Join-Path $root "..\LICENSE") (Join-Path $stage "LICENSE") -Force
-    Compress-Archive -Path (Join-Path $stage "MeetingBar.exe"), (Join-Path $stage "README.md"), (Join-Path $stage "LICENSE") -DestinationPath (Join-Path $dist "MeetingBar-Windows-portable.zip") -Force
+    Compress-Archive -Path (Join-Path $stage "MeetingBar.exe"), (Join-Path $stage "README.md"), (Join-Path $stage "THIRD-PARTY-NOTICES.md"), (Join-Path $stage "LICENSE") -DestinationPath (Join-Path $dist "MeetingBar-Windows-portable.zip") -Force
     Write-Host "Package: $dist\MeetingBar-Windows-portable.zip"
 }

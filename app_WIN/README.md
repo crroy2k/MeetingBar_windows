@@ -18,11 +18,11 @@ First launch defaults to Classic Outlook. Right-click the tray icon, choose **Se
 - **Near tray**: compact meeting title/time overlay immediately left of the notification area, plus tray icon.
 - **Taskbar left**: compact overlay at the far-left edge, plus tray icon.
 
-The taskbar versions are borderless topmost overlays. Windows 11 has no supported third-party text-widget slot inside its taskbar. Width and X/Y offsets are configurable for taskbar size, alignment, display scaling, and third-party taskbar tools.
+The taskbar versions are borderless topmost overlays. Windows 11 has no supported third-party text-widget slot inside its taskbar. Widget width shrinks to its event content; its maximum width and X/Y offsets are configurable for taskbar size, alignment, display scaling, and third-party taskbar tools. The full taskbar-height surface is interactive. At rest the widget has no border or background; its rounded hover surface uses the measured taskbar hover intensity and automatic light/dark text contrast, while the custom-color override applies to that hover surface. On Windows 11 22H2 or newer the popup uses always-on native acrylic composition, rounded DWM corners, the current Windows accent, and a DWM-synchronized 167 ms whole-window taskbar slide; older systems receive a solid fallback. A loading surface covers the calendar content until the first provider sync completes. Event lists use display-synchronized eased mouse-wheel scrolling, direct precision-touchpad scrolling, and a neutral auto-hiding overlay scrollbar. Settings follows Windows light/dark, accent, and high-contrast colors; Save applies and reloads changes without closing the window.
 
 ## Features
 
-- Current/next meeting, today/tomorrow event list, countdowns, calendar colors, dismissals
+- Current/next meeting, event-aware tray icon and upcoming-event dot, configurable ongoing time remaining, live event timeline, dimmed past events, hover detail flyouts, today/tomorrow event list, countdowns, event colors, transparent full-color emoji titles, meeting-provider join icons, and Open calendar action
 - Google Meet, Zoom, Teams, Webex, Jitsi, Slack Huddles, and the full MeetingBar provider catalogue; arbitrary links remain joinable
 - Meeting-link precedence, HTML cleanup, custom regex model, and nested Outlook SafeLink decoding
 - Event filters: all-day, declined, tentative, free/non-busy, linkless, calendar selection
@@ -33,6 +33,8 @@ The taskbar versions are borderless topmost overlays. Windows 11 has no supporte
 - Local command forwarding for Raycast for Windows, PowerToys Run, scripts, and desktop shortcuts
 
 Mac-only AppleScript, Shortcuts, EventKit, StoreKit, and experimental features are intentionally absent.
+
+Full-color emoji use an offline Twemoji atlas. See `THIRD-PARTY-NOTICES.md` in the portable package for attribution.
 
 ## Launcher commands
 
