@@ -71,17 +71,20 @@ jobs:
           }
           $hashLines | Set-Content (Join-Path $dist 'SHA256SUMS.txt') -Encoding ascii
 
-          $publishedAt = (Get-Date).ToUniversalTime().ToString('u')
-          @"
-          Automated rolling pre-release built from the latest Windows app changes on main.
+          $changelog = Get-Content '.\CHANGELOG.md' -Raw
+          $unreleasedMatch = [regex]::Match(
+            $changelog,
+            '(?ims)^##[ \t]+(?:Unreleased|\[Unreleased\])[ \t]*(?:\r?\n|\z)(?<notes>.*?)(?=^##[ \t]+|\z)'
+          )
+          if (!$unreleasedMatch.Success) { throw 'CHANGELOG.md does not contain an Unreleased section.' }
 
-          **Recommended download:** MeetingBar-Windows-portable.zip
-
-          The standalone EXE is included for quick testing. The Settings and WinWWidget folders from the ZIP are required for full functionality.
-
-          Source commit: $env:GITHUB_SHA
-          Published: $publishedAt
-          "@ | Set-Content (Join-Path $dist 'prerelease-notes.md') -Encoding utf8
+          $unreleasedNotes = $unreleasedMatch.Groups['notes'].Value.Trim()
+          $notesPath = Join-Path $dist 'prerelease-notes.md'
+          [System.IO.File]::WriteAllText(
+            $notesPath,
+            $unreleasedNotes,
+            [System.Text.UTF8Encoding]::new($false)
+          )
 
       - name: Publish rolling pre-release
         shell: pwsh
