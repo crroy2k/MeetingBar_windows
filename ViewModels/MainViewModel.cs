@@ -26,6 +26,8 @@ namespace MeetingBar.Windows.ViewModels
         public ObservableCollection<Bookmark> Bookmarks { get; } = new ObservableCollection<Bookmark>();
         public CalendarEvent NextEvent => Events.FirstOrDefault(x => x.End > DateTime.Now && !x.IsDismissed);
         public CalendarEvent TaskbarEvent => EventWindowPolicy.NextTaskbarEvent(Events, _settings.Current.IgnoreFreeEventsInTaskbar, DateTime.Now);
+        public CalendarEvent WidgetEvent => EventWindowPolicy.NextWidgetEvent(Events, _settings.Current, DateTime.Now);
+        public bool ShouldShowTaskbarWidget => _settings.Current.EndOfDayWidgetBehavior != EndOfDayWidgetBehavior.Hide || WidgetEvent != null;
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
         public bool IsRefreshing { get => _isRefreshing; set => Set(ref _isRefreshing, value); }
         public Visibility LoadingVisibility => _isInitialLoading ? Visibility.Visible : Visibility.Collapsed;
@@ -47,19 +49,25 @@ namespace MeetingBar.Windows.ViewModels
         {
             get
             {
-                if (TaskbarEvent == null) return "No upcoming meetings";
+                if (WidgetEvent == null)
+                {
+                    switch (_settings.Current.EndOfDayWidgetBehavior)
+                    {
+                        case EndOfDayWidgetBehavior.NoEventsToday: return "No events for today";
+                        case EndOfDayWidgetBehavior.CustomMessage: return TruncateWidgetTitle(string.IsNullOrWhiteSpace(_settings.Current.EndOfDayCustomMessage) ? "Done for today" : _settings.Current.EndOfDayCustomMessage.Trim());
+                        default: return "No upcoming meetings";
+                    }
+                }
                 var mode = _settings.Current.TitleMode;
                 if (mode == TitleMode.Hidden) return "";
                 if (mode == TitleMode.Dot) return "•";
                 if (mode == TitleMode.Generic) return "Meeting";
-                var title = TaskbarEvent.Title ?? "Untitled event";
-                var max = Math.Max(5, _settings.Current.TitleMaxLength);
-                return title.Length > max ? title.Substring(0, max - 1) + "…" : title;
+                return TruncateWidgetTitle(WidgetEvent.Title ?? "Untitled event");
             }
         }
-        public string WidgetTime => TaskbarEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : TaskbarEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? TaskbarEvent.Remaining : _settings.Current.TimeMode == TimeMode.StartTime ? CalendarEvent.FormatTime(TaskbarEvent.Start, _settings.Current.Use24HourClock) : TaskbarEvent.Countdown;
-        public Visibility WidgetIconVisibility => _settings.Current.ShowServiceIcon ? Visibility.Visible : Visibility.Collapsed;
-        public string WidgetEventColor => TaskbarEvent?.CalendarColor ?? "#6D7CFF";
+        public string WidgetTime => WidgetEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : WidgetEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? WidgetEvent.Remaining : _settings.Current.TimeMode == TimeMode.StartTime ? CalendarEvent.FormatTime(WidgetEvent.Start, _settings.Current.Use24HourClock) : WidgetEvent.Countdown;
+        public Visibility WidgetIconVisibility => WidgetEvent != null && _settings.Current.ShowServiceIcon ? Visibility.Visible : Visibility.Collapsed;
+        public string WidgetEventColor => WidgetEvent?.CalendarColor ?? "#6D7CFF";
         public bool CanJoinNext => NextEvent?.CanJoin == true;
         public ICommand JoinCommand { get; }
         public ICommand OpenEventCommand { get; }
@@ -145,7 +153,12 @@ namespace MeetingBar.Windows.ViewModels
             }
             Raise(nameof(HasEvents));
         }
-        private void RaiseComputed() { Raise(nameof(NextEvent)); Raise(nameof(TaskbarEvent)); Raise(nameof(Header)); Raise(nameof(NextTitle)); Raise(nameof(NextMeta)); Raise(nameof(WidgetTitle)); Raise(nameof(WidgetTime)); Raise(nameof(WidgetIconVisibility)); Raise(nameof(WidgetEventColor)); Raise(nameof(CanJoinNext)); Raise(nameof(CanOpenCalendar)); Raise(nameof(HasEvents)); Raise(nameof(HasBookmarks)); Raise(nameof(TimelinePastHours)); Raise(nameof(TimelineFutureHours)); Raise(nameof(TimelineIncludesPastDay)); Raise(nameof(TimelineIncludesNextDay)); Raise(nameof(TimelinePastDays)); Raise(nameof(TimelineFutureDays)); Raise(nameof(Use24HourClock)); Raise(nameof(ShowTimelineDate)); Raise(nameof(TimelineDateFormat)); Raise(nameof(LoadingVisibility)); }
+        private string TruncateWidgetTitle(string title)
+        {
+            var max = Math.Max(5, _settings.Current.TitleMaxLength);
+            return title.Length > max ? title.Substring(0, max - 1) + "…" : title;
+        }
+        private void RaiseComputed() { Raise(nameof(NextEvent)); Raise(nameof(TaskbarEvent)); Raise(nameof(WidgetEvent)); Raise(nameof(ShouldShowTaskbarWidget)); Raise(nameof(Header)); Raise(nameof(NextTitle)); Raise(nameof(NextMeta)); Raise(nameof(WidgetTitle)); Raise(nameof(WidgetTime)); Raise(nameof(WidgetIconVisibility)); Raise(nameof(WidgetEventColor)); Raise(nameof(CanJoinNext)); Raise(nameof(CanOpenCalendar)); Raise(nameof(HasEvents)); Raise(nameof(HasBookmarks)); Raise(nameof(TimelinePastHours)); Raise(nameof(TimelineFutureHours)); Raise(nameof(TimelineIncludesPastDay)); Raise(nameof(TimelineIncludesNextDay)); Raise(nameof(TimelinePastDays)); Raise(nameof(TimelineFutureDays)); Raise(nameof(Use24HourClock)); Raise(nameof(ShowTimelineDate)); Raise(nameof(TimelineDateFormat)); Raise(nameof(LoadingVisibility)); }
         public void RefreshSettings() { _isInitialLoading = true; RaiseComputed(); }
         public void Dispose() { _sync.Changed -= SyncChanged; _clock.Stop(); }
     }

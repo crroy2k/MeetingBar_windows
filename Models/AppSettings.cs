@@ -8,6 +8,7 @@ namespace MeetingBar.Windows.Models
     public enum TitleMode { Full, Generic, Dot, Hidden }
     public enum TimeMode { Countdown, StartTime, Hidden }
     public enum WidgetHighlightStyle { Hover, Shine }
+    public enum EndOfDayWidgetBehavior { NextEvent, Hide, NoEventsToday, CustomMessage }
 
     public sealed class CalendarSourceSettings
     {
@@ -53,6 +54,8 @@ namespace MeetingBar.Windows.Models
         public bool ShowOngoingTimeRemaining { get; set; } = true;
         public int TitleMaxLength { get; set; } = 64;
         public bool ShowServiceIcon { get; set; } = true;
+        public EndOfDayWidgetBehavior EndOfDayWidgetBehavior { get; set; } = EndOfDayWidgetBehavior.NextEvent;
+        public string EndOfDayCustomMessage { get; set; } = "Done for today";
         public bool EnableWinWWidget { get; set; }
         public bool HighlightStartingMeetings { get; set; } = true;
         public int HighlightMinutesBefore { get; set; } = 5;
