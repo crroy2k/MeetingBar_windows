@@ -1,7 +1,7 @@
 <div align="center">
 
- <h1> <img src="docs/icon.png" width="100px">
- <br/>
+ <h1> <img src="docs/icon.png" width="200px">
+ <br><br/>
  MeetingBar for Windows</h1>
 
 
