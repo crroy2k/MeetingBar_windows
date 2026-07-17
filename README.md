@@ -30,6 +30,7 @@ See [`app_WIN/README.md`](app_WIN/README.md) for setup, providers, features, pri
 
 - `app_WIN/` — WPF tray application, WinUI 3 settings host, Win+W widget provider, tests, resources, and packaging script
 - `.github/workflows/ci.yml` — Windows build, test, package, and artifact validation
+- `.github/workflows/prerelease.yml` — rolling Windows pre-release publishing from `main`
 - `.github/workflows/security.yml` — weekly and change-triggered NuGet vulnerability audit
 
 ## License
