@@ -1,5 +1,5 @@
 # Security Policy
 
-## Reporting a Vulnerability
+Do not report suspected vulnerabilities in a public issue or include calendar data, OAuth credentials, meeting links, or diagnostic logs containing personal information.
 
-Please report (suspected) security vulnerabilities to <leits.dev@gmail.com>. You will receive a response from us within 48 hours. If the issue is confirmed, we will release a patch as soon as possible depending on complexity but historically within a few days.
+Report vulnerabilities privately to the repository owner through GitHub. Include the affected version, impact, reproduction steps, and a minimal sanitized proof of concept.

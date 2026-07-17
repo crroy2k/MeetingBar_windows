@@ -52,18 +52,15 @@ if ($Test) {
 
 if ($Package) {
     $dist = Join-Path $root "dist"
-    $stage = Join-Path $dist "portable"
-    New-Item -ItemType Directory -Force $stage | Out-Null
-    Copy-Item (Join-Path $root "bin\$Configuration\MeetingBar.exe") (Join-Path $stage "MeetingBar.exe") -Force
-    $settingsStage = Join-Path $stage "Settings"
-    New-Item -ItemType Directory -Force $settingsStage | Out-Null
-    Copy-Item (Join-Path $root "bin\$Configuration\Settings\*") $settingsStage -Recurse -Force
-    $widgetStage = Join-Path $stage "WinWWidget"
-    New-Item -ItemType Directory -Force $widgetStage | Out-Null
-    Copy-Item (Join-Path $root "bin\$Configuration\WinWWidget\*") $widgetStage -Recurse -Force
-    Copy-Item (Join-Path $root "README.md") (Join-Path $stage "README.md") -Force
-    Copy-Item (Join-Path $root "THIRD-PARTY-NOTICES.md") (Join-Path $stage "THIRD-PARTY-NOTICES.md") -Force
-    Copy-Item (Join-Path $root "..\LICENSE") (Join-Path $stage "LICENSE") -Force
-    Compress-Archive -Path (Join-Path $stage "MeetingBar.exe"), $settingsStage, $widgetStage, (Join-Path $stage "README.md"), (Join-Path $stage "THIRD-PARTY-NOTICES.md"), (Join-Path $stage "LICENSE") -DestinationPath (Join-Path $dist "MeetingBar-Windows-portable.zip") -Force
+    New-Item -ItemType Directory -Force $dist | Out-Null
+    $packageInputs = @(
+        (Join-Path $root "bin\$Configuration\MeetingBar.exe")
+        (Join-Path $root "bin\$Configuration\Settings")
+        (Join-Path $root "bin\$Configuration\WinWWidget")
+        (Join-Path $root "README.md")
+        (Join-Path $root "THIRD-PARTY-NOTICES.md")
+        (Join-Path $root "..\LICENSE")
+    )
+    Compress-Archive -Path $packageInputs -DestinationPath (Join-Path $dist "MeetingBar-Windows-portable.zip") -Force
     Write-Host "Package: $dist\MeetingBar-Windows-portable.zip"
 }

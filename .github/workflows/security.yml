@@ -1,118 +1,56 @@
-name: Security
+name: Windows Dependency Audit
 
 on:
   pull_request:
+    paths:
+      - 'app_WIN/**/*.csproj'
+      - '.github/workflows/security.yml'
   push:
     branches:
-      - master
+      - main
+    paths:
+      - 'app_WIN/**/*.csproj'
+      - '.github/workflows/security.yml'
   schedule:
-    - cron: "16 21 * * 4"
+    - cron: '17 4 * * 1'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
-defaults:
-  run:
-    shell: bash
-
-env:
-  DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
-
 jobs:
-  dependency-review:
-    name: Dependency Review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pull-requests: read
+  nuget-audit:
+    name: Audit NuGet dependencies
+    runs-on: windows-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Review dependency changes
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+      - name: Install .NET 8 SDK
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
-          fail-on-severity: moderate
+          dotnet-version: 8.0.x
 
-  codeql:
-    name: CodeQL Swift
-    if: github.event_name != 'pull_request'
-    runs-on: macos-15
-    timeout-minutes: 60
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Select Xcode
+      - name: Restore Windows App SDK projects
+        shell: pwsh
         run: |
-          if [ ! -d "$DEVELOPER_DIR" ]; then
-            echo "Expected Xcode not found at $DEVELOPER_DIR"
-            ls -1 /Applications | grep '^Xcode' || true
-            exit 1
-          fi
-          sudo xcode-select -s "$DEVELOPER_DIR"
-          xcodebuild -version
+          $audit = @(
+            '-p:NuGetAudit=true'
+            '-p:NuGetAuditMode=all'
+            '-p:NuGetAuditLevel=low'
+            '-p:TreatWarningsAsErrors=true'
+          )
+          dotnet restore .\app_WIN\SettingsApp\MeetingBar.Settings.csproj -r win-x64 -p:Platform=x64 @audit
+          dotnet restore .\app_WIN\WidgetProvider\MeetingBar.WidgetProvider.csproj -r win-x64 -p:Platform=x64 @audit
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
-        with:
-          languages: swift
-          build-mode: manual
-
-      - name: Build for CodeQL
-        run: make build-quiet
-
-      - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
-        with:
-          category: /language:swift
-
-  codacy:
-    name: Codacy Security Scan
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    env:
-      CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Skip when Codacy token is unavailable
-        if: env.CODACY_PROJECT_TOKEN == ''
-        run: echo "CODACY_PROJECT_TOKEN is not configured; skipping Codacy scan."
-
-      - name: Run Codacy Analysis CLI
-        if: env.CODACY_PROJECT_TOKEN != ''
-        uses: codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08 # v4.4.7
-        with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          verbose: true
-          output: results.sarif
-          format: sarif
-          gh-code-scanning-compat: true
-          max-allowed-issues: 2147483647
-
-      - name: Upload SARIF results
-        if: env.CODACY_PROJECT_TOKEN != ''
-        uses: github/codeql-action/upload-sarif@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
-        with:
-          sarif_file: results.sarif
+      - name: Check for vulnerable packages
+        shell: pwsh
+        run: |
+          dotnet list .\app_WIN\SettingsApp\MeetingBar.Settings.csproj package --vulnerable --include-transitive
+          dotnet list .\app_WIN\WidgetProvider\MeetingBar.WidgetProvider.csproj package --vulnerable --include-transitive

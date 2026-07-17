@@ -1,60 +1,31 @@
-# Contributing to MeetingBar
+# Contributing to MeetingBar for Windows
 
-MeetingBar welcomes focused bug fixes, meeting-service integrations, reliability improvements, translations, and documentation updates.
+Keep changes focused on the Windows application under `app_WIN` and its repository support files.
 
-## GitHub Workflow
+## Development requirements
 
-Use GitHub issues for public bugs and feature requests. Keep pull requests small enough to review in one pass, and describe:
+- Windows 10 or Windows 11
+- Visual Studio 2022 or Build Tools with MSBuild and the .NET Framework 4.7.2 targeting pack
+- .NET 8 SDK
 
-* What changed and why
-* User-visible behavior changes
-* Tests or validation commands you ran
-* Any dependency, entitlement, signing, URL scheme, script, workflow, or base-localization changes
+## Validation
 
-## Bug Reports
+Before opening a pull request, run:
 
-Good bug reports include:
-
-* MeetingBar version and macOS version
-* Calendar provider: macOS Calendar or Google Calendar
-* Meeting service when relevant: Zoom, Google Meet, Microsoft Teams, Webex, etc.
-* Steps to reproduce
-* Expected behavior and actual behavior
-* Whether manual refresh, relaunch, or reconnect changes the result
-* Sanitized event title, description, location, URL fields, screenshots, or logs when useful
-
-## Building Locally
-
-MeetingBar is a macOS app built with Xcode, Swift 6, AppKit, SwiftUI, and Xcode-managed Swift Package dependencies.
-
-For local signing, create `XCConfig/DevTeamOverride.xcconfig` with your Apple development team. This file is git-ignored, so you do not need to change the Xcode project:
-
-```xcconfig
-DEVELOPMENT_TEAM = <your development team id>
+```powershell
+.\app_WIN\build.ps1 -Configuration Release -Test -Package
 ```
 
-Direct Google Calendar onboarding also requires a Google OAuth desktop client. Set `GOOGLE_CLIENT_NUMBER`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_AUTH_KEYCHAIN_NAME` through a private xcconfig or build environment; never commit their values. Placeholder or missing OAuth settings produce an onboarding error in local builds.
+The command builds the .NET Framework tray app, publishes the .NET 8 WinUI settings app and widget provider, runs the Windows test executable, and creates the portable ZIP.
 
-Common validation commands:
+## Pull requests
 
-```bash
-make build            # Debug build
-make test             # SwiftPM logic tests + Xcode app-hosted tests with coverage
-make test-logic       # Hostless SwiftPM logic tests only
-make lint             # SwiftLint
-make validate-strings # Verify English localization keys used by .loco()
-```
+Describe:
 
-Unsigned local Debug builds may print entitlement or signing warnings because code signing is disabled. That warning is expected for local verification; signed Release builds still need a real signing check.
+- what changed and why
+- user-visible behavior changes
+- the Windows version and calendar provider used for manual testing
+- validation commands and results
+- any dependency, packaging, manifest, OAuth, startup, notification, or widget changes
 
-## Architecture And Dependencies
-
-Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before changing app flow, calendar providers, meeting-link detection, notifications, status-bar rendering, settings, package dependencies, entitlements, or release-sensitive configuration.
-
-Direct app dependencies are Xcode Swift Package references pinned by `MeetingBar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`. `Package.swift` defines the hostless `MeetingBarLogic` package used for fast policy tests. Do not update only `Package.resolved`; change the Xcode package requirement intentionally and review the resolved diff. StoreKit is a system framework, not an external package dependency.
-
-Update `CHANGELOG.md` for user-visible changes and notable architecture, dependency, or release-process changes. For new source strings, update `MeetingBar/Resources /Localization /en.lproj/Localizable.strings` and run `make validate-strings`; non-English translations are managed through Weblate.
-
-## License
-
-By contributing, you agree that your contributions are licensed under the Apache License 2.0.
+Update `app_WIN/CHANGELOG.md` for user-visible changes and notable build or release changes. Never commit OAuth credentials, calendar data, logs containing meeting details, or generated `bin`, `obj`, and `dist` output.

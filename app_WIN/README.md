@@ -1,6 +1,6 @@
 # MeetingBar for Windows
 
-Native Windows companion to MeetingBar. It shows the current or next meeting in the notification area and, optionally, in a taskbar-aligned widget. Every surface opens the same meeting popup.
+Native Windows edition of MeetingBar. It shows the current or next meeting in the notification area and, optionally, in a taskbar-aligned widget. Every surface opens the same meeting popup.
 
 ## Run
 
@@ -62,7 +62,7 @@ Visual Studio 2022 or Build Tools with the .NET Framework 4.7.2 targeting pack, 
 .\build.ps1 -Configuration Release -Test -Package
 ```
 
-Source structure follows the Mac app's feature ownership: calendar providers and sync, meeting detection/opening, notifications, settings, then surface controllers.
+Source structure follows feature ownership: calendar providers and sync, meeting detection/opening, notifications, settings, then surface controllers.
 
 ## Known platform limits
 

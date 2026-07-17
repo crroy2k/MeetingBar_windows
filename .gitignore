@@ -1,25 +1,26 @@
-# MacOS generated files
-.DS_Store
-.DS_Store?
+# Windows and Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
 
-# Development Team override
-XCConfig/DevTeamOverride.xcconfig
+# Build and test output
+**/bin/
+**/obj/
+app_WIN/dist/
+TestResults/
+*.cache
 
-# XCode generated files
-MeetingBar.xcodeproj/project.xcworkspace/xcuserdata/*
-MeetingBar.xcodeproj/xcuserdata/*
-MeetingBar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/*
-!MeetingBar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
-
-Archive/*
-build
-
-# SwiftPM hostless test build artifacts (created by `make test-logic`)
-.build/
-.swiftpm/
-
-# AI agent local state
+# Local tooling
+.vscode/
+.idea/
 .claude/
 .ignore
 AGENTS.md
 CLAUDE.md
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
