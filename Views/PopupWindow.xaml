@@ -47,7 +47,7 @@
                   </StackPanel>
                   <StackPanel Grid.Column="2" Margin="4,8">
                     <views:EmojiTextBlock EmojiText="{Binding Title}" Style="{StaticResource EmojiText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding CalendarName}" Foreground="{StaticResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding CalendarDisplayName}" Foreground="{StaticResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                   </StackPanel>
                   <StackPanel Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Command="{Binding DataContext.RestoreEventCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Visibility="{Binding CanRestoreNotifications, Converter={StaticResource BooleanVisibility}}" Padding="7" Margin="6,5,0,5" AutomationProperties.Name="Restore meeting notifications">

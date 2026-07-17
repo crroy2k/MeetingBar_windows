@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace MeetingBar.Windows.Models
@@ -7,6 +8,36 @@ namespace MeetingBar.Windows.Models
     public enum TitleMode { Full, Generic, Dot, Hidden }
     public enum TimeMode { Countdown, StartTime, Hidden }
     public enum WidgetHighlightStyle { Hover, Shine }
+
+    public sealed class CalendarSourceSettings
+    {
+        public string Id { get; set; } = "";
+        public CalendarProviderKind Provider { get; set; } = CalendarProviderKind.Outlook;
+        public string Name { get; set; } = "";
+        public bool Enabled { get; set; } = true;
+        public string IcsSources { get; set; } = "";
+        public string GoogleRefreshTokenProtected { get; set; } = "";
+        public string GoogleAccountEmail { get; set; } = "";
+        public List<string> SelectedCalendarIds { get; set; } = new List<string>();
+        public bool CalendarSelectionConfigured { get; set; }
+
+        public static CalendarSourceSettings Create(CalendarProviderKind provider, string name = null) => new CalendarSourceSettings
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Provider = provider,
+            Name = string.IsNullOrWhiteSpace(name) ? DefaultName(provider) : name
+        };
+
+        public static string DefaultName(CalendarProviderKind provider)
+        {
+            switch (provider)
+            {
+                case CalendarProviderKind.Ics: return "ICS calendar";
+                case CalendarProviderKind.Google: return "Google Calendar";
+                default: return "Classic Outlook";
+            }
+        }
+    }
 
     public sealed class AppSettings
     {
@@ -57,6 +88,9 @@ namespace MeetingBar.Windows.Models
         public int AutoJoinMinutesBefore { get; set; }
         public bool GlobalJoinHotkey { get; set; } = true;
         public int RefreshMinutes { get; set; } = 3;
+        public int CalendarSourcesVersion { get; set; }
+        public List<CalendarSourceSettings> CalendarSources { get; set; } = new List<CalendarSourceSettings>();
+        // Retained for automatic migration from settings written by MeetingBar 0.1.
         public CalendarProviderKind Provider { get; set; } = CalendarProviderKind.Outlook;
         public string IcsSources { get; set; } = "";
         public string GoogleClientId { get; set; } = "";
@@ -72,5 +106,38 @@ namespace MeetingBar.Windows.Models
         public string PreferredBrowserPath { get; set; } = "";
         public string PreferredBrowserArguments { get; set; } = "";
         public string MapProvider { get; set; } = "Google Maps";
+
+        public bool EnsureCalendarSources()
+        {
+            var changed = false;
+            if (CalendarSources == null) { CalendarSources = new List<CalendarSourceSettings>(); changed = true; }
+            if (CalendarSourcesVersion < 1)
+            {
+                var source = CalendarSourceSettings.Create(Provider);
+                source.IcsSources = IcsSources ?? "";
+                source.GoogleRefreshTokenProtected = GoogleRefreshTokenProtected ?? "";
+                source.GoogleAccountEmail = GoogleAccountEmail ?? "";
+                source.SelectedCalendarIds = SelectedCalendarIds ?? new List<string>();
+                source.CalendarSelectionConfigured = source.SelectedCalendarIds.Count > 0;
+                if (source.Provider == CalendarProviderKind.Google && !string.IsNullOrWhiteSpace(source.GoogleAccountEmail)) source.Name = source.GoogleAccountEmail;
+                CalendarSources.Add(source);
+                CalendarSourcesVersion = 1;
+                changed = true;
+            }
+            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var source in CalendarSources)
+            {
+                if (source == null) continue;
+                if (string.IsNullOrWhiteSpace(source.Id) || !ids.Add(source.Id))
+                {
+                    source.Id = Guid.NewGuid().ToString("N");
+                    ids.Add(source.Id);
+                    changed = true;
+                }
+                if (string.IsNullOrWhiteSpace(source.Name)) { source.Name = CalendarSourceSettings.DefaultName(source.Provider); changed = true; }
+                if (source.SelectedCalendarIds == null) { source.SelectedCalendarIds = new List<string>(); changed = true; }
+            }
+            return changed;
+        }
     }
 }

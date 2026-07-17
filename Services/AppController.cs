@@ -88,7 +88,13 @@ namespace MeetingBar.Windows.Services
 
         public void ExecuteCommand(string command)
         {
-            switch ((command ?? "popup").Trim().TrimStart('-').ToLowerInvariant())
+            var normalized = (command ?? "popup").Trim().TrimStart('-').ToLowerInvariant();
+            if (normalized.StartsWith("connect-google|", StringComparison.Ordinal))
+            {
+                _ = ConnectGoogleFromSettings(normalized.Substring("connect-google|".Length));
+                return;
+            }
+            switch (normalized)
             {
                 case "join": _opener.Open(_main.NextEvent); break;
                 case "create": _opener.Open(_settings.Current.CreateMeetingUrl); break;
@@ -96,7 +102,7 @@ namespace MeetingBar.Windows.Services
                 case "refresh": _ = _sync.RefreshAsync(); break;
                 case "settings": OpenSettings(); break;
                 case "reload": _ = ReloadSettings(); break;
-                case "connect-google": _ = ConnectGoogleFromSettings(); break;
+                case "connect-google": _ = ConnectGoogleFromSettings(null); break;
                 case "debug-inject": InjectDebugEvent(); break;
                 case "debug-notification": TriggerDebugNotification(false); break;
                 case "debug-reminder": TriggerDebugNotification(true); break;
@@ -209,24 +215,31 @@ namespace MeetingBar.Windows.Services
             catch (Exception error) { AppLog.Error("Win+W widget state", error); }
         }
 
-        private async Task ConnectGoogleFromSettings()
+        private async Task ConnectGoogleFromSettings(string sourceId)
         {
             _settings.Reload();
-            WriteSettingsState("Opening Google sign-in. Approve read-only calendar access in your browser.", true);
+            var source = string.IsNullOrWhiteSpace(sourceId)
+                ? _settings.Current.CalendarSources.FirstOrDefault(x => x.Provider == CalendarProviderKind.Google)
+                : _settings.Current.CalendarSources.FirstOrDefault(x => string.Equals(x.Id, sourceId, StringComparison.OrdinalIgnoreCase));
+            if (source == null || source.Provider != CalendarProviderKind.Google)
+            {
+                WriteSettingsState("The Google calendar source no longer exists.", false, sourceId);
+                return;
+            }
+            WriteSettingsState("Opening Google sign-in. Choose the account to add and approve read-only calendar access.", true, source.Id);
             try
             {
-                await _sync.Google.ConnectAsync(_settings.Current);
-                _settings.Current.Provider = CalendarProviderKind.Google;
+                await _sync.Google.ConnectAsync(_settings.Current, source);
                 _settings.Save();
                 ApplySettings();
-                WriteSettingsState("Connected as " + _settings.Current.GoogleAccountEmail + ". Loading calendars…", true);
+                WriteSettingsState("Connected as " + source.GoogleAccountEmail + ". Loading calendars…", true, source.Id);
                 await _sync.RefreshAsync();
-                WriteSettingsState("Connected as " + _settings.Current.GoogleAccountEmail, false);
+                WriteSettingsState("Connected as " + source.GoogleAccountEmail, false, source.Id);
             }
             catch (Exception error)
             {
                 AppLog.Error("Google connect", error);
-                WriteSettingsState(error.Message, false);
+                WriteSettingsState(error.Message, false, source.Id);
             }
         }
 
@@ -260,25 +273,27 @@ namespace MeetingBar.Windows.Services
             catch { return fallback; }
         }
 
-        private void WriteSettingsState(string message = null, bool busy = false)
+        private void WriteSettingsState(string message = null, bool busy = false, string activeSourceId = null)
         {
             try
             {
-                var connected = _sync.Google.IsConnected(_settings.Current);
                 var status = message;
                 if (string.IsNullOrWhiteSpace(status))
                 {
-                    if (!connected) status = "Not connected";
-                    else if (!_sync.Status.IsHealthy && !string.IsNullOrWhiteSpace(_sync.Status.Message)) status = _sync.Status.Message;
-                    else status = "Connected as " + _settings.Current.GoogleAccountEmail;
+                    status = !string.IsNullOrWhiteSpace(_sync.Status.Message) ? _sync.Status.Message : "Calendar sources ready";
                 }
+                var connectedEmails = _settings.Current.CalendarSources
+                    .Where(x => x.Provider == CalendarProviderKind.Google && _sync.Google.IsConnected(x))
+                    .Select(x => x.GoogleAccountEmail).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
                 var state = new Dictionary<string, object>
                 {
                     ["StatusMessage"] = status,
                     ["IsBusy"] = busy,
-                    ["GoogleAccountEmail"] = _settings.Current.GoogleAccountEmail ?? "",
+                    ["ActiveSourceId"] = activeSourceId ?? "",
+                    ["GoogleAccountEmail"] = string.Join(", ", connectedEmails),
                     ["Calendars"] = _sync.Calendars.Select(x => new Dictionary<string, object>
                     {
+                        ["SourceId"] = x.SourceId ?? "", ["SourceName"] = x.SourceName ?? "", ["SourceKind"] = x.Source ?? "",
                         ["Id"] = x.Id ?? "", ["Name"] = x.Name ?? "", ["Color"] = x.Color ?? "#6D7CFF"
                     }).ToList()
                 };

@@ -6,6 +6,8 @@
 
 <!-- Wrote each entry in past tense, for example: "Added ..." -->
 
+- Added simultaneous multi-provider calendar sources, multiple Google and ICS accounts, shared Google OAuth client configuration with per-account encrypted tokens, per-source calendar selection, and automatic migration from the previous single-provider settings.
+
 ### Fixed
 
 <!-- Wrote each entry in past tense and appended its issue when available, for example: "Fixed ... (#123)" -->

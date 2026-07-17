@@ -33,7 +33,43 @@ namespace MeetingBar.Tests
                 var events = IcsCalendarProvider.Parse(ics, "work", "Work", "#fff", new DateTime(2026, 7, 16), new DateTime(2026, 7, 20));
                 Equal(3, events.Count); Equal(new DateTime(2026, 7, 18, 10, 0, 0), events.Last().Start);
             });
-            Test("defaults retain privacy-safe local provider", () => Equal(CalendarProviderKind.Outlook, new AppSettings().Provider));
+            Test("defaults retain privacy-safe local provider", () =>
+            {
+                var settings = new AppSettings();
+                Equal(true, settings.EnsureCalendarSources());
+                Equal(1, settings.CalendarSources.Count);
+                Equal(CalendarProviderKind.Outlook, settings.CalendarSources[0].Provider);
+            });
+            Test("legacy Google settings migrate into an independent source", () =>
+            {
+                var settings = new AppSettings
+                {
+                    Provider = CalendarProviderKind.Google,
+                    GoogleRefreshTokenProtected = "protected-token",
+                    GoogleAccountEmail = "one@example.com",
+                    SelectedCalendarIds = new List<string> { "primary" }
+                };
+                settings.EnsureCalendarSources();
+                var source = settings.CalendarSources.Single();
+                Equal(CalendarProviderKind.Google, source.Provider);
+                Equal("protected-token", source.GoogleRefreshTokenProtected);
+                Equal("one@example.com", source.GoogleAccountEmail);
+                Equal(true, source.CalendarSelectionConfigured);
+                Equal("primary", source.SelectedCalendarIds.Single());
+                Equal(false, settings.EnsureCalendarSources());
+                Equal(1, settings.CalendarSources.Count);
+            });
+            Test("source namespaces prevent cross-account event collisions", () =>
+            {
+                Equal("account-one::primary::same-event", CalendarSyncService.SourceEventId("account-one", "primary", "same-event"));
+                Equal(false, CalendarSyncService.SourceEventId("account-one", "primary", "same-event") == CalendarSyncService.SourceEventId("account-two", "primary", "same-event"));
+                Equal(false, CalendarSyncService.SourceEventId("account-one", "primary", "same-event") == CalendarSyncService.SourceEventId("account-one", "shared", "same-event"));
+            });
+            Test("events identify their calendar account", () =>
+            {
+                var item = new CalendarEvent { CalendarName = "Team", CalendarSourceName = "one@example.com" };
+                Equal("Team · one@example.com", item.CalendarDisplayName);
+            });
             Test("Win+W widget stays opt-in", () => Equal(false, new AppSettings().EnableWinWWidget));
             Test("requires Google Calendar read-only scope", () => { Equal(true, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/calendar.readonly")); Equal(false, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/userinfo.email")); });
             Test("explains disabled Google Calendar API", () => Contains("not enabled", GoogleCalendarProvider.ApiErrorMessage(System.Net.HttpStatusCode.Forbidden, "{\"error\":{\"errors\":[{\"reason\":\"accessNotConfigured\"}]}}")));

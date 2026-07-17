@@ -18,6 +18,7 @@ namespace MeetingBar.Windows.Services
             Directory.CreateDirectory(folder);
             SettingsPath = Path.Combine(folder, "settings.json");
             Current = Load();
+            if (Current.EnsureCalendarSources()) Save();
             if (Current.WidgetSettingsVersion < 1)
             {
                 if (Current.WidgetWidth <= 300) Current.WidgetWidth = 500;
@@ -61,7 +62,7 @@ namespace MeetingBar.Windows.Services
         }
 
         public AppSettings CopyCurrent() => _json.Deserialize<AppSettings>(_json.Serialize(Current));
-        public void Reload() { Current = Load(); }
-        public void Replace(AppSettings settings) { Current = settings ?? new AppSettings(); Save(); }
+        public void Reload() { Current = Load(); if (Current.EnsureCalendarSources()) Save(); }
+        public void Replace(AppSettings settings) { Current = settings ?? new AppSettings(); Current.EnsureCalendarSources(); Save(); }
     }
 }

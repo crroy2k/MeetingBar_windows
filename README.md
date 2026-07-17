@@ -6,11 +6,13 @@ Native Windows edition of MeetingBar. It shows the current or next meeting in th
 
 The portable build is `dist/MeetingBar-Windows-portable.zip`. Extract the complete archive and run `MeetingBar.exe`; keep its `Settings` folder beside it. No installer or administrator rights are required. Windows 10 or 11 with .NET Framework 4.7.2+ is required. The zero-extraction, self-contained WinUI 3 settings host carries its own .NET and Windows App SDK runtime.
 
-First launch defaults to Classic Outlook. Right-click the tray icon, choose **Settings**, then select a provider:
+First launch adds Classic Outlook as the initial source. Right-click the tray icon, choose **Settings**, then add, remove, rename, or temporarily disable any number of calendar sources. Outlook, ICS, and Google sources can be combined in the same agenda:
 
 - **Outlook** reads local Classic Outlook calendars through its local COM interface. New Outlook does not expose that interface.
-- **ICS** accepts one local `.ics` path or HTTPS calendar feed URL per line.
-- **Google** uses direct Calendar API access. Follow the four-step guide in Settings. Besides enabling Google Calendar API, the OAuth consent configuration must include `https://www.googleapis.com/auth/calendar.readonly` under **Data Access**. Create an OAuth client of type **Desktop app**, enter its client ID, then connect. OAuth uses PKCE and a temporary loopback callback on `127.0.0.1`; the refresh token is encrypted with Windows Data Protection for the signed-in Windows user.
+- **ICS** sources accept one local `.ics` path or HTTPS calendar feed URL per line. Add multiple ICS source cards when separate naming, visibility, or enable/disable controls are useful.
+- **Google** uses direct Calendar API access. Follow the four-step guide in Settings. Besides enabling Google Calendar API, the OAuth consent configuration must include `https://www.googleapis.com/auth/calendar.readonly` under **Data Access**. Create one OAuth client of type **Desktop app** and enter its client ID once, then add and connect each Google account separately. Every connection uses the same OAuth client and asks which Google account to add; each account receives its own refresh token, encrypted with Windows Data Protection for the signed-in Windows user. OAuth uses PKCE and a temporary loopback callback on `127.0.0.1`.
+
+Each source has its own visible-calendar selection. If one source fails to refresh, MeetingBar keeps that source's last-known-good events while continuing to update healthy sources. Existing single-provider settings are migrated automatically on first launch.
 
 ## Surfaces
 
@@ -28,7 +30,7 @@ The taskbar versions are borderless topmost overlays. Windows 11 has no supporte
 - Meeting-link precedence, HTML cleanup, custom regex model, and nested Outlook SafeLink decoding
 - Event filters: all-day, declined, tentative, free/non-busy, linkless, calendar selection
 - Preferred browser, create-meeting URL, recurring meeting bookmarks
-- Start with Windows, periodic/manual refresh, last-known-good events after provider failure
+- Start with Windows, periodic/manual refresh, multiple simultaneous providers/accounts, and per-source last-known-good events after provider failure
 - Multiple selectable meeting notifications (including at start), optional full-screen reminder, end notification, auto-join
 - Configurable taskbar highlight before and during meetings, using the native hover surface or an animated in-progress shine
 - Global `Ctrl+Alt+J` join shortcut

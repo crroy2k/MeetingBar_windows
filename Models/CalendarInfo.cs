@@ -2,6 +2,8 @@ namespace MeetingBar.Windows.Models
 {
     public sealed class CalendarInfo
     {
+        public string SourceId { get; set; }
+        public string SourceName { get; set; }
         public string Id { get; set; }
         public string Name { get; set; }
         public string Source { get; set; }
