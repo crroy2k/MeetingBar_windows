@@ -1,15 +1,18 @@
-### Status
-**READY/IN DEVELOPMENT/HOLD**
+## What changed
 
-### Description
-A few sentences describing the overall goals of the pull request's commits.
+Describe the change and why it is needed.
 
+## Windows impact
 
-## Checklist
-- [ ] Localized
-- [ ] Added to changelog:
-  - [ ] [Changelog View](https://github.com/leits/MeetingBar/blob/master/MeetingBar/UI/Views/Changelog/Changelog.swift)
-  - [ ] [CHANGELOG.md](https://github.com/leits/MeetingBar/blob/master/CHANGELOG.md)
+- Affected Windows versions:
+- Affected calendar providers:
+- Affected surfaces (tray, taskbar, Win+W, settings, notifications):
 
-### Steps to Test or Reproduce
-Outline the steps to test or reproduce the PR here.
+## Validation
+
+- [ ] `.\app_WIN\build.ps1 -Configuration Release -Test -Package`
+- [ ] Manual behavior checked where applicable
+- [ ] No credentials, calendar data, logs, or generated build output committed
+- [ ] `app_WIN/CHANGELOG.md` updated for user-visible or release-process changes
+
+Include exact commands, results, and any validation that could not be run.
