@@ -449,7 +449,7 @@ public sealed partial class MainWindow : Window
         TextBox? icsSources = null;
         if (source.Provider == CalendarProviderKind.Ics)
         {
-            icsSources = new TextBox { Text = source.IcsSources, Header = "ICS files and HTTPS feed URLs (one per line)", AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinWidth = 420, Height = 90 };
+            icsSources = new TextBox { Text = source.IcsSources, Header = "ICS files, HTTPS URLs, and webcal:// links (one per line)", AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinWidth = 420, Height = 90 };
             body.Children.Add(icsSources);
         }
         if (source.Provider == CalendarProviderKind.Google)
