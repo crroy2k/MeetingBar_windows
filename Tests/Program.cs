@@ -33,6 +33,13 @@ namespace MeetingBar.Tests
                 var events = IcsCalendarProvider.Parse(ics, "work", "Work", "#fff", new DateTime(2026, 7, 16), new DateTime(2026, 7, 20));
                 Equal(3, events.Count); Equal(new DateTime(2026, 7, 18, 10, 0, 0), events.Last().Start);
             });
+            Test("normalizes webcal subscriptions to secure feed URLs", () =>
+            {
+                Equal("https://calendar.example.com/team.ics?token=secret", IcsCalendarProvider.NormalizeRemoteUri("webcal://calendar.example.com/team.ics?token=secret").AbsoluteUri);
+                Equal("https://calendar.example.com/team.ics", IcsCalendarProvider.NormalizeRemoteUri("webcals://calendar.example.com/team.ics").AbsoluteUri);
+                Equal("http://calendar.example.com/team.ics", IcsCalendarProvider.NormalizeRemoteUri("http://calendar.example.com/team.ics").AbsoluteUri);
+                Equal(null, IcsCalendarProvider.NormalizeRemoteUri("C:\\Calendars\\team.ics"));
+            });
             Test("defaults retain privacy-safe local provider", () =>
             {
                 var settings = new AppSettings();

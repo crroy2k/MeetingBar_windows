@@ -7,6 +7,7 @@
 <!-- Wrote each entry in past tense, for example: "Added ..." -->
 
 - Added simultaneous multi-provider calendar sources, multiple Google and ICS accounts, shared Google OAuth client configuration with per-account encrypted tokens, per-source calendar selection, and automatic migration from the previous single-provider settings.
+- Added `webcal://` and `webcals://` subscription links for ICS calendar sources, fetched securely over HTTPS.
 
 ### Fixed
 

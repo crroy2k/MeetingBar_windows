@@ -21,13 +21,25 @@ namespace MeetingBar.Windows.Services
             var events = new List<CalendarEvent>();
             foreach (var source in (sourceList ?? "").Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).Where(x => x.Length > 0))
             {
-                var text = Uri.IsWellFormedUriString(source, UriKind.Absolute) ? await _http.GetStringAsync(source) : File.ReadAllText(Environment.ExpandEnvironmentVariables(source));
+                var remoteUri = NormalizeRemoteUri(source);
+                var text = remoteUri != null ? await _http.GetStringAsync(remoteUri) : File.ReadAllText(Environment.ExpandEnvironmentVariables(source));
                 var id = StableId(source);
                 var name = CalendarName(text, source);
                 calendars.Add(new CalendarInfo { Id = id, Name = name, Source = "ICS", Color = ColorFor(id) });
                 events.AddRange(Parse(text, id, name, ColorFor(id), from, to));
             }
             return Tuple.Create(calendars, events);
+        }
+
+        internal static Uri NormalizeRemoteUri(string source)
+        {
+            Uri uri;
+            if (!Uri.TryCreate(source, UriKind.Absolute, out uri)) return null;
+            if (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) return uri;
+            if (!string.Equals(uri.Scheme, "webcal", StringComparison.OrdinalIgnoreCase) && !string.Equals(uri.Scheme, "webcals", StringComparison.OrdinalIgnoreCase)) return null;
+            var builder = new UriBuilder(uri) { Scheme = Uri.UriSchemeHttps };
+            if (uri.IsDefaultPort) builder.Port = -1;
+            return builder.Uri;
         }
 
         internal static List<CalendarEvent> Parse(string input, string calendarId, string calendarName, string color, DateTime from, DateTime to)
