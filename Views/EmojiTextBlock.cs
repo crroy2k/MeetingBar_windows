@@ -25,6 +25,8 @@ namespace MeetingBar.Windows.Views
 
         private static void TextChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args) => ((EmojiTextBlock)sender).Rebuild();
 
+        internal static bool TryGetEmoji(string key, out BitmapSource image) => Atlas.Value.TryGet(key, out image);
+
         private void Rebuild()
         {
             Inlines.Clear();
@@ -33,7 +35,7 @@ namespace MeetingBar.Windows.Views
             foreach (var token in EmojiTokenizer.Tokenize(text))
             {
                 BitmapSource image;
-                if (token.Key != null && Atlas.Value.TryGet(token.Key, out image))
+                if (token.Key != null && TryGetEmoji(token.Key, out image))
                 {
                     FlushText(plain);
                     var size = Math.Max(12, FontSize * 1.12);

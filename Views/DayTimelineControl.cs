@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -186,9 +187,8 @@ namespace MeetingBar.Windows.Views
                 var top = gridTop + 5 + lane * 13;
                 drawingContext.DrawRoundedRectangle(EventBrush(item.CalendarColor), item.IsCurrent ? new Pen(Brushes.White, 1) : null, new Rect(left, top, segmentWidth, 10), 3, 3);
                 if (segmentWidth < 36) continue;
-                var title = Text(item.Title ?? "", 8, FontWeights.SemiBold, Brushes.White, pixelsPerDip);
                 drawingContext.PushClip(new RectangleGeometry(new Rect(left + 3, top, Math.Max(0, segmentWidth - 6), 10)));
-                drawingContext.DrawText(title, new Point(left + 3, top - 1));
+                DrawEventTitle(drawingContext, item.Title ?? "", new Point(left + 3, top - 1), pixelsPerDip);
                 drawingContext.Pop();
             }
 
@@ -270,6 +270,31 @@ namespace MeetingBar.Windows.Views
         {
             try { return BrushFrom(string.IsNullOrWhiteSpace(value) ? "#FF6D7CFF" : value); }
             catch { return BrushFrom("#FF6D7CFF"); }
+        }
+        private static void DrawEventTitle(DrawingContext drawingContext, string value, Point origin, double pixelsPerDip)
+        {
+            var x = origin.X;
+            var plain = new StringBuilder();
+            foreach (var token in EmojiTokenizer.Tokenize(value))
+            {
+                if (token.Key != null && EmojiTextBlock.TryGetEmoji(token.Key, out var image))
+                {
+                    x += DrawEventTitleText(drawingContext, plain, new Point(x, origin.Y), pixelsPerDip);
+                    const double emojiSize = 9;
+                    drawingContext.DrawImage(image, new Rect(x, origin.Y + 1, emojiSize, emojiSize));
+                    x += emojiSize;
+                }
+                else plain.Append(token.Text);
+            }
+            DrawEventTitleText(drawingContext, plain, new Point(x, origin.Y), pixelsPerDip);
+        }
+        private static double DrawEventTitleText(DrawingContext drawingContext, StringBuilder value, Point origin, double pixelsPerDip)
+        {
+            if (value.Length == 0) return 0;
+            var text = Text(value.ToString(), 8, FontWeights.SemiBold, Brushes.White, pixelsPerDip);
+            drawingContext.DrawText(text, origin);
+            value.Clear();
+            return text.WidthIncludingTrailingWhitespace;
         }
         private static FormattedText Text(string value, double size, FontWeight weight, Brush brush, double pixelsPerDip) =>
             new FormattedText(value, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
