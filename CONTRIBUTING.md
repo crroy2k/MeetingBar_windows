@@ -29,3 +29,11 @@ Describe:
 - any dependency, packaging, manifest, OAuth, startup, notification, or widget changes
 
 Update `CHANGELOG.md` for user-visible changes and notable build or release changes. Never commit OAuth credentials, calendar data, logs containing meeting details, or generated `bin`, `obj`, and `dist` output.
+
+## Changelog entries
+
+Add every release note under the `Added` or `Fixed` subsection of `Unreleased`:
+
+- Wrote entries in the past tense, such as `Added calendar filtering` or `Fixed taskbar positioning`.
+- Added the related GitHub issue to each fix when one existed, such as `Fixed taskbar positioning (#123)`.
+- Used issue numbers only for matching issues; did not substitute pull request numbers.

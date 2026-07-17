@@ -58,10 +58,21 @@ jobs:
             throw "CHANGELOG.md does not contain a $version release section."
           }
 
+          $releaseNotes = $releaseMatch.Groups['notes'].Value.Trim()
+          foreach ($heading in @('Added', 'Fixed')) {
+            if ($releaseNotes -notmatch "(?im)^###[ \t]+$heading[ \t]*$") {
+              throw "The $version changelog must contain a '$heading' subsection."
+            }
+          }
+
+          if ($releaseNotes -match '(?im)^-[ \t]+(?:Add|Change|Correct|Detect|Embed|Enable|Expand|Fix|Improve|Keep|Make|Match|Move|Prevent|Remove|Replace|Restore|Synchronize|Update|Use)\b') {
+            throw 'Release-note bullets must begin in the past tense.'
+          }
+
           $notesPath = Join-Path $dist 'release-notes.md'
           [System.IO.File]::WriteAllText(
             $notesPath,
-            $releaseMatch.Groups['notes'].Value.Trim(),
+            $releaseNotes,
             [System.Text.UTF8Encoding]::new($false)
           )
 
@@ -73,7 +84,7 @@ jobs:
           $tag = '${{ github.ref_name }}'
           gh release create $tag `
             --repo $env:GITHUB_REPOSITORY `
-            --title "MeetingBar for Windows $tag" `
+            --title "MeetingBar_windows $($tag.TrimStart('v'))" `
             --notes-file '.\dist\release-notes.md' `
             --verify-tag `
             ".\dist\MeetingBar-Windows-$tag-portable.zip" `
