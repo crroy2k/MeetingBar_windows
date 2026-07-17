@@ -13,8 +13,8 @@ updates:
 
   - package-ecosystem: nuget
     directories:
-      - /app_WIN/SettingsApp
-      - /app_WIN/WidgetProvider
+      - /SettingsApp
+      - /WidgetProvider
     schedule:
       interval: weekly
     groups:

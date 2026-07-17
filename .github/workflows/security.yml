@@ -3,13 +3,13 @@ name: Windows Dependency Audit
 on:
   pull_request:
     paths:
-      - 'app_WIN/**/*.csproj'
+      - '**/*.csproj'
       - '.github/workflows/security.yml'
   push:
     branches:
       - main
     paths:
-      - 'app_WIN/**/*.csproj'
+      - '**/*.csproj'
       - '.github/workflows/security.yml'
   schedule:
     - cron: '17 4 * * 1'
@@ -46,11 +46,11 @@ jobs:
             '-p:NuGetAuditLevel=low'
             '-p:TreatWarningsAsErrors=true'
           )
-          dotnet restore .\app_WIN\SettingsApp\MeetingBar.Settings.csproj -r win-x64 -p:Platform=x64 @audit
-          dotnet restore .\app_WIN\WidgetProvider\MeetingBar.WidgetProvider.csproj -r win-x64 -p:Platform=x64 @audit
+          dotnet restore .\SettingsApp\MeetingBar.Settings.csproj -r win-x64 -p:Platform=x64 @audit
+          dotnet restore .\WidgetProvider\MeetingBar.WidgetProvider.csproj -r win-x64 -p:Platform=x64 @audit
 
       - name: Check for vulnerable packages
         shell: pwsh
         run: |
-          dotnet list .\app_WIN\SettingsApp\MeetingBar.Settings.csproj package --vulnerable --include-transitive
-          dotnet list .\app_WIN\WidgetProvider\MeetingBar.WidgetProvider.csproj package --vulnerable --include-transitive
+          dotnet list .\SettingsApp\MeetingBar.Settings.csproj package --vulnerable --include-transitive
+          dotnet list .\WidgetProvider\MeetingBar.WidgetProvider.csproj package --vulnerable --include-transitive

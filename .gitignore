@@ -8,7 +8,7 @@
 # Build and test output
 **/bin/
 **/obj/
-app_WIN/dist/
+dist/
 TestResults/
 *.cache
 
