@@ -59,7 +59,7 @@ if ($Package) {
         (Join-Path $root "bin\$Configuration\WinWWidget")
         (Join-Path $root "README.md")
         (Join-Path $root "THIRD-PARTY-NOTICES.md")
-        (Join-Path $root "..\LICENSE")
+        (Join-Path $root "LICENSE")
     )
     Compress-Archive -Path $packageInputs -DestinationPath (Join-Path $dist "MeetingBar-Windows-portable.zip") -Force
     Write-Host "Package: $dist\MeetingBar-Windows-portable.zip"

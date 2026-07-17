@@ -1,6 +1,6 @@
 # Contributing to MeetingBar for Windows
 
-Keep changes focused on the Windows application under `app_WIN` and its repository support files.
+Keep changes focused on the Windows application and its repository support files.
 
 ## Development requirements
 
@@ -13,7 +13,7 @@ Keep changes focused on the Windows application under `app_WIN` and its reposito
 Before opening a pull request, run:
 
 ```powershell
-.\app_WIN\build.ps1 -Configuration Release -Test -Package
+.\build.ps1 -Configuration Release -Test -Package
 ```
 
 The command builds the .NET Framework tray app, publishes the .NET 8 WinUI settings app and widget provider, runs the Windows test executable, and creates the portable ZIP.
@@ -28,4 +28,4 @@ Describe:
 - validation commands and results
 - any dependency, packaging, manifest, OAuth, startup, notification, or widget changes
 
-Update `app_WIN/CHANGELOG.md` for user-visible changes and notable build or release changes. Never commit OAuth credentials, calendar data, logs containing meeting details, or generated `bin`, `obj`, and `dist` output.
+Update `CHANGELOG.md` for user-visible changes and notable build or release changes. Never commit OAuth credentials, calendar data, logs containing meeting details, or generated `bin`, `obj`, and `dist` output.

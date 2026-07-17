@@ -34,12 +34,12 @@ jobs:
 
       - name: Build, test, and package Windows app
         shell: pwsh
-        run: .\app_WIN\build.ps1 -Configuration Release -Test -Package
+        run: .\build.ps1 -Configuration Release -Test -Package
 
       - name: Upload portable package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: MeetingBar-Windows-portable
-          path: app_WIN/dist/MeetingBar-Windows-portable.zip
+          path: dist/MeetingBar-Windows-portable.zip
           if-no-files-found: error
           retention-days: 14
