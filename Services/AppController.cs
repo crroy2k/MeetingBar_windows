@@ -115,7 +115,7 @@ namespace MeetingBar.Windows.Services
         private void ApplySettings()
         {
             _main.RefreshSettings();
-            if (_settings.Current.WidgetMode == WidgetMode.TrayOnly)
+            if (_settings.Current.WidgetMode == WidgetMode.TrayOnly || !_main.ShouldShowTaskbarWidget)
             {
                 _widget?.Hide();
             }
@@ -137,7 +137,11 @@ namespace MeetingBar.Windows.Services
 
         private void EnsureWidgetVisible()
         {
-            if (_settings.Current.WidgetMode == WidgetMode.TrayOnly) return;
+            if (_settings.Current.WidgetMode == WidgetMode.TrayOnly || !_main.ShouldShowTaskbarWidget)
+            {
+                _widget?.Hide();
+                return;
+            }
             if (_widget == null) CreateWidget();
             if (!_widget.IsVisible) _widget.Show();
             var widgetHandle = new WindowInteropHelper(_widget).Handle;

@@ -78,6 +78,7 @@ namespace MeetingBar.Tests
                 Equal("Team · one@example.com", item.CalendarDisplayName);
             });
             Test("Win+W widget stays opt-in", () => Equal(false, new AppSettings().EnableWinWWidget));
+            Test("taskbar widget keeps next-event behavior by default", () => Equal(EndOfDayWidgetBehavior.NextEvent, new AppSettings().EndOfDayWidgetBehavior));
             Test("requires Google Calendar read-only scope", () => { Equal(true, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/calendar.readonly")); Equal(false, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/userinfo.email")); });
             Test("explains disabled Google Calendar API", () => Contains("not enabled", GoogleCalendarProvider.ApiErrorMessage(System.Net.HttpStatusCode.Forbidden, "{\"error\":{\"errors\":[{\"reason\":\"accessNotConfigured\"}]}}")));
             Test("maps Google event-specific colors", () =>
@@ -169,6 +170,21 @@ namespace MeetingBar.Tests
                 var events = new[] { new CalendarEvent { Id = "free", Start = now.AddMinutes(5), End = now.AddMinutes(30), IsBusy = false }, new CalendarEvent { Id = "busy", Start = now.AddMinutes(10), End = now.AddMinutes(40), IsBusy = true } };
                 Equal("free", EventWindowPolicy.NextTaskbarEvent(events, false, now).Id);
                 Equal("busy", EventWindowPolicy.NextTaskbarEvent(events, true, now).Id);
+            });
+            Test("taskbar widget applies end-of-day behavior only after today's events", () =>
+            {
+                var now = new DateTime(2026, 7, 16, 18, 0, 0);
+                var today = new CalendarEvent { Id = "today", Start = now.AddHours(1), End = now.AddHours(2) };
+                var tomorrow = new CalendarEvent { Id = "tomorrow", Start = now.Date.AddDays(1).AddHours(9), End = now.Date.AddDays(1).AddHours(10) };
+                var settings = new AppSettings { EndOfDayWidgetBehavior = EndOfDayWidgetBehavior.NoEventsToday };
+                Equal("today", EventWindowPolicy.NextWidgetEvent(new[] { today, tomorrow }, settings, now).Id);
+                Equal(null, EventWindowPolicy.NextWidgetEvent(new[] { tomorrow }, settings, now));
+                settings.EndOfDayWidgetBehavior = EndOfDayWidgetBehavior.NextEvent;
+                Equal("tomorrow", EventWindowPolicy.NextWidgetEvent(new[] { tomorrow }, settings, now).Id);
+
+                var current = new CalendarEvent { Id = "current", Start = now.Date.AddDays(-1).AddHours(23), End = now.AddMinutes(30) };
+                settings.EndOfDayWidgetBehavior = EndOfDayWidgetBehavior.Hide;
+                Equal("current", EventWindowPolicy.NextWidgetEvent(new[] { current, tomorrow }, settings, now).Id);
             });
             Test("dismissed meetings stay in agendas but are muted elsewhere", () =>
             {

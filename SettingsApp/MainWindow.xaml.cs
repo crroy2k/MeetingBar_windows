@@ -21,10 +21,10 @@ public sealed partial class MainWindow : Window
     private string _page = "";
     private string _stateSignature = "";
 
-    private ComboBox? _widgetMode, _titleMode, _timeMode, _highlightStyle, _timelineDateFormat, _mapProvider;
+    private ComboBox? _widgetMode, _titleMode, _timeMode, _endOfDayBehavior, _highlightStyle, _timelineDateFormat, _mapProvider;
     private Slider? _widgetWidth;
     private NumberBox? _offsetX, _offsetY, _titleLength, _highlightBefore, _highlightAfter, _refreshMinutes, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours, _timelinePastDays, _timelineFutureDays;
-    private TextBox? _widgetColor, _googleClientId, _browserPath, _browserArgs, _createUrl, _debugTitle, _debugColor;
+    private TextBox? _widgetColor, _endOfDayCustomMessage, _googleClientId, _browserPath, _browserArgs, _createUrl, _debugTitle, _debugColor;
     private PasswordBox? _googleClientSecret;
     private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _winWWidget, _highlightMeetings, _highlightWholeMeeting, _allDay, _declined, _tentative, _free, _ignoreFreeTaskbar, _requireLink, _includePastDay, _includeNextDay, _fullDayEventList, _use24HourClock, _showTimelineDate;
     private ToggleSwitch? _notify, _fullScreen, _notifyEnd, _autoJoin, _hotkey, _startWithWindows;
@@ -207,6 +207,11 @@ public sealed partial class MainWindow : Window
         AddCard("Maximum title length", "Longer event names are shortened at this character count.", _titleLength);
         _showIcon = Toggle(_settings.ShowServiceIcon);
         AddCard("Colored event icon", "Show the event-colored square beside the title.", _showIcon);
+        _endOfDayBehavior = Choice(new[] { "Show next event", "Hide taskbar widget", "Show no events for today", "Show custom message" }, (int)_settings.EndOfDayWidgetBehavior);
+        AddCard("After today's events", "Choose what the taskbar widget does when no current or upcoming event remains today.", _endOfDayBehavior);
+        _endOfDayCustomMessage = TextEntry(_settings.EndOfDayCustomMessage, 240);
+        _endOfDayCustomMessage.MaxLength = 200;
+        AddCard("Custom end-of-day message", "Used when Show custom message is selected.", _endOfDayCustomMessage);
 
         AddSection("Starting meeting highlight");
         _highlightMeetings = Toggle(_settings.HighlightStartingMeetings);
@@ -638,6 +643,8 @@ public sealed partial class MainWindow : Window
                 if (_ongoingTime != null) _settings.ShowOngoingTimeRemaining = _ongoingTime.IsOn;
                 if (_titleLength != null) _settings.TitleMaxLength = (int)Finite(_titleLength.Value, 64);
                 if (_showIcon != null) _settings.ShowServiceIcon = _showIcon.IsOn;
+                if (_endOfDayBehavior != null) _settings.EndOfDayWidgetBehavior = (EndOfDayWidgetBehavior)Math.Max(0, _endOfDayBehavior.SelectedIndex);
+                if (_endOfDayCustomMessage != null) _settings.EndOfDayCustomMessage = _endOfDayCustomMessage.Text.Trim();
                 if (_highlightMeetings != null) _settings.HighlightStartingMeetings = _highlightMeetings.IsOn;
                 if (_highlightBefore != null) _settings.HighlightMinutesBefore = (int)Finite(_highlightBefore.Value, 5);
                 if (_highlightAfter != null) _settings.HighlightMinutesAfterStart = (int)Finite(_highlightAfter.Value, 10);
