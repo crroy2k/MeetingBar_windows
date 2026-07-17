@@ -1,6 +1,20 @@
-# MeetingBar for Windows
+<div align="center">
 
-Native Windows edition of MeetingBar. It shows the current or next meeting in the notification area and, optionally, in a taskbar-aligned widget. Every surface opens the same meeting popup.
+ <h1> <img src="docs/icon.png" width="100px">
+ <br/>
+ MeetingBar for Windows</h1>
+
+
+ <img src="https://custom-icon-badges.demolab.com/badge/Windows 11-0078D6?logo=windows11&logoColor=white"/> 
+ <img src="https://custom-icon-badges.demolab.com/badge/C%23-%23239120.svg?logo=cshrp&logoColor=white"/> 
+
+
+</div>
+<br/>
+
+
+
+Native Windows edition of MeetingBar. It shows the current or next meeting in the notification area and, optionally, in a taskbar-aligned widget. Every surface opens the same meeting popup. based on https://meetingbar.app/
 
 ## Run
 
