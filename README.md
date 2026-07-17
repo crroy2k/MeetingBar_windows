@@ -67,12 +67,13 @@ Commands forward to the already-running instance:
 MeetingBar.exe --popup
 MeetingBar.exe --join
 MeetingBar.exe --create
+MeetingBar.exe --calendar
 MeetingBar.exe --refresh
 MeetingBar.exe --settings
 MeetingBar.exe --quit
 ```
 
-In Raycast for Windows, create Run Commands pointing to the executable plus the desired argument.
+For Raycast for Windows, import the ready-made commands from the packaged `raycast` folder. See the complete [Raycast setup guide](docs/RAYCAST.md). The guide also covers manual Run Commands, hotkeys, paths containing spaces, PowerShell policy, and troubleshooting.
 
 ## Build and test
 
