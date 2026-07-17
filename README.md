@@ -14,7 +14,11 @@
 
 
 
-Native Windows edition of MeetingBar. It shows the current or next meeting in the notification area and, optionally, in a taskbar-aligned widget. Every surface opens the same meeting popup. based on https://meetingbar.app/
+Native Windows edition of MeetingBar. It shows the current or next meeting in the notification area and, optionally, in a taskbar-aligned widget. Every surface opens the same meeting popup. 
+
+> [!IMPORTANT]
+> The code and concept are based on the mac only https://meetingbar.app/
+
 
 ## Run
 
