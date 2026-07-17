@@ -16,6 +16,8 @@ namespace MeetingBar.Windows.Models
         public string EventUrl { get; set; }
         public string CalendarOpenUrl { get; set; }
         public string ConferenceUrl { get; set; }
+        public string SourceId { get; set; }
+        public string CalendarSourceName { get; set; }
         public string CalendarId { get; set; }
         public string CalendarName { get; set; }
         public string CalendarColor { get; set; } = "#6D7CFF";
@@ -53,7 +55,16 @@ namespace MeetingBar.Windows.Models
             }
             return value.ToString(format, CultureInfo.CurrentCulture);
         }
-        public string CalendarDetails => string.IsNullOrWhiteSpace(CalendarName) ? null : "Calendar  ·  " + CalendarName;
+        public string CalendarDisplayName
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(CalendarName)) return CalendarSourceName;
+                if (string.IsNullOrWhiteSpace(CalendarSourceName) || string.Equals(CalendarName, CalendarSourceName, StringComparison.OrdinalIgnoreCase)) return CalendarName;
+                return CalendarName + " · " + CalendarSourceName;
+            }
+        }
+        public string CalendarDetails => string.IsNullOrWhiteSpace(CalendarDisplayName) ? null : "Calendar  ·  " + CalendarDisplayName;
         public string OrganizerDetails => string.IsNullOrWhiteSpace(Organizer) ? null : "Organizer  ·  " + Organizer;
         public string LocationDetails => string.IsNullOrWhiteSpace(Location) ? null : "Location  ·  " + Location;
         public string MeetingDetails => string.IsNullOrWhiteSpace(MeetingService) ? null : "Meeting link  ·  " + MeetingService;

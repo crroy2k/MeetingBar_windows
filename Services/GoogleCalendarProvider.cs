@@ -22,10 +22,11 @@ namespace MeetingBar.Windows.Services
         private readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         private readonly JavaScriptSerializer _json = new JavaScriptSerializer { MaxJsonLength = 20 * 1024 * 1024 };
 
-        public bool IsConnected(AppSettings settings) => !string.IsNullOrWhiteSpace(settings.GoogleRefreshTokenProtected);
+        public bool IsConnected(CalendarSourceSettings source) => source != null && !string.IsNullOrWhiteSpace(source.GoogleRefreshTokenProtected);
 
-        public async Task ConnectAsync(AppSettings settings)
+        public async Task ConnectAsync(AppSettings settings, CalendarSourceSettings source)
         {
+            if (source == null) throw new ArgumentNullException(nameof(source));
             if (string.IsNullOrWhiteSpace(settings.GoogleClientId)) throw new InvalidOperationException("Enter a Google OAuth desktop client ID first.");
             var verifier = Base64Url(RandomBytes(48));
             string challenge;
@@ -37,7 +38,7 @@ namespace MeetingBar.Windows.Services
             {
                 var port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 var redirect = "http://127.0.0.1:" + port + "/";
-                var auth = "https://accounts.google.com/o/oauth2/v2/auth?client_id=" + HttpUtility.UrlEncode(settings.GoogleClientId) + "&redirect_uri=" + HttpUtility.UrlEncode(redirect) + "&response_type=code&scope=" + HttpUtility.UrlEncode(Scope) + "&access_type=offline&prompt=consent&code_challenge=" + challenge + "&code_challenge_method=S256&state=" + HttpUtility.UrlEncode(state);
+                var auth = "https://accounts.google.com/o/oauth2/v2/auth?client_id=" + HttpUtility.UrlEncode(settings.GoogleClientId) + "&redirect_uri=" + HttpUtility.UrlEncode(redirect) + "&response_type=code&scope=" + HttpUtility.UrlEncode(Scope) + "&access_type=offline&prompt=select_account%20consent&code_challenge=" + challenge + "&code_challenge_method=S256&state=" + HttpUtility.UrlEncode(state);
                 System.Diagnostics.Process.Start(auth);
                 var clientTask = listener.AcceptTcpClientAsync();
                 if (await Task.WhenAny(clientTask, Task.Delay(TimeSpan.FromMinutes(3))) != clientTask) throw new TimeoutException("Google sign-in timed out.");
@@ -62,15 +63,17 @@ namespace MeetingBar.Windows.Services
                 EnsureCalendarScope(token);
                 var refresh = Value(token, "refresh_token");
                 if (string.IsNullOrWhiteSpace(refresh)) throw new InvalidOperationException("Google did not issue a refresh token.");
-                settings.GoogleRefreshTokenProtected = Protect(refresh);
-                settings.GoogleAccountEmail = await GetEmail(Value(token, "access_token"));
+                source.GoogleRefreshTokenProtected = Protect(refresh);
+                source.GoogleAccountEmail = await GetEmail(Value(token, "access_token"));
+                if (string.IsNullOrWhiteSpace(source.Name) || source.Name == CalendarSourceSettings.DefaultName(CalendarProviderKind.Google)) source.Name = source.GoogleAccountEmail;
             }
             finally { listener.Stop(); }
         }
 
-        public async Task<Tuple<List<CalendarInfo>, List<CalendarEvent>>> FetchAsync(AppSettings settings, DateTime from, DateTime to)
+        public async Task<Tuple<List<CalendarInfo>, List<CalendarEvent>>> FetchAsync(AppSettings settings, CalendarSourceSettings source, DateTime from, DateTime to)
         {
-            var access = await AccessToken(settings);
+            if (!IsConnected(source)) throw new InvalidOperationException("Google account is not connected.");
+            var access = await AccessToken(settings, source);
             var eventColors = new Dictionary<string, string>();
             try { eventColors = ParseEventColors(await GetJson("https://www.googleapis.com/calendar/v3/colors", access)); }
             catch { }
@@ -101,10 +104,10 @@ namespace MeetingBar.Windows.Services
             return Tuple.Create(calendars, events.OrderBy(x => x.Start).ToList());
         }
 
-        public void Disconnect(AppSettings settings) { settings.GoogleRefreshTokenProtected = ""; settings.GoogleAccountEmail = ""; }
-        private async Task<string> AccessToken(AppSettings s)
+        public void Disconnect(CalendarSourceSettings source) { if (source == null) return; source.GoogleRefreshTokenProtected = ""; source.GoogleAccountEmail = ""; }
+        private async Task<string> AccessToken(AppSettings settings, CalendarSourceSettings source)
         {
-            var token = await PostForm("https://oauth2.googleapis.com/token", new Dictionary<string, string> { ["client_id"] = s.GoogleClientId, ["client_secret"] = s.GoogleClientSecret ?? "", ["refresh_token"] = Unprotect(s.GoogleRefreshTokenProtected), ["grant_type"] = "refresh_token" });
+            var token = await PostForm("https://oauth2.googleapis.com/token", new Dictionary<string, string> { ["client_id"] = settings.GoogleClientId, ["client_secret"] = settings.GoogleClientSecret ?? "", ["refresh_token"] = Unprotect(source.GoogleRefreshTokenProtected), ["grant_type"] = "refresh_token" });
             EnsureCalendarScope(token);
             return Value(token, "access_token");
         }

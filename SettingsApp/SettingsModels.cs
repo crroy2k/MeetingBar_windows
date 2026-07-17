@@ -10,6 +10,33 @@ public enum TitleMode { Full, Generic, Dot, Hidden }
 public enum TimeMode { Countdown, StartTime, Hidden }
 public enum WidgetHighlightStyle { Hover, Shine }
 
+public sealed class CalendarSourceSettings
+{
+    public string Id { get; set; } = "";
+    public CalendarProviderKind Provider { get; set; } = CalendarProviderKind.Outlook;
+    public string Name { get; set; } = "";
+    public bool Enabled { get; set; } = true;
+    public string IcsSources { get; set; } = "";
+    public string GoogleRefreshTokenProtected { get; set; } = "";
+    public string GoogleAccountEmail { get; set; } = "";
+    public List<string> SelectedCalendarIds { get; set; } = [];
+    public bool CalendarSelectionConfigured { get; set; }
+
+    public static CalendarSourceSettings Create(CalendarProviderKind provider, string? name = null) => new()
+    {
+        Id = Guid.NewGuid().ToString("N"),
+        Provider = provider,
+        Name = string.IsNullOrWhiteSpace(name) ? DefaultName(provider) : name
+    };
+
+    public static string DefaultName(CalendarProviderKind provider) => provider switch
+    {
+        CalendarProviderKind.Ics => "ICS calendar",
+        CalendarProviderKind.Google => "Google Calendar",
+        _ => "Classic Outlook"
+    };
+}
+
 public sealed class Bookmark
 {
     public string Name { get; set; } = "";
@@ -65,6 +92,9 @@ public sealed class AppSettings
     public int AutoJoinMinutesBefore { get; set; }
     public bool GlobalJoinHotkey { get; set; } = true;
     public int RefreshMinutes { get; set; } = 3;
+    public int CalendarSourcesVersion { get; set; }
+    public List<CalendarSourceSettings> CalendarSources { get; set; } = [];
+    // Retained for automatic migration from settings written by MeetingBar 0.1.
     public CalendarProviderKind Provider { get; set; } = CalendarProviderKind.Outlook;
     public string IcsSources { get; set; } = "";
     public string GoogleClientId { get; set; } = "";
@@ -80,10 +110,45 @@ public sealed class AppSettings
     public string PreferredBrowserPath { get; set; } = "";
     public string PreferredBrowserArguments { get; set; } = "";
     public string MapProvider { get; set; } = "Google Maps";
+
+    public bool EnsureCalendarSources()
+    {
+        var changed = false;
+        CalendarSources ??= [];
+        if (CalendarSourcesVersion < 1)
+        {
+            var source = CalendarSourceSettings.Create(Provider);
+            source.IcsSources = IcsSources ?? "";
+            source.GoogleRefreshTokenProtected = GoogleRefreshTokenProtected ?? "";
+            source.GoogleAccountEmail = GoogleAccountEmail ?? "";
+            source.SelectedCalendarIds = SelectedCalendarIds ?? [];
+            source.CalendarSelectionConfigured = source.SelectedCalendarIds.Count > 0;
+            if (source.Provider == CalendarProviderKind.Google && !string.IsNullOrWhiteSpace(source.GoogleAccountEmail)) source.Name = source.GoogleAccountEmail;
+            CalendarSources.Add(source);
+            CalendarSourcesVersion = 1;
+            changed = true;
+        }
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var source in CalendarSources)
+        {
+            if (string.IsNullOrWhiteSpace(source.Id) || !ids.Add(source.Id))
+            {
+                source.Id = Guid.NewGuid().ToString("N");
+                ids.Add(source.Id);
+                changed = true;
+            }
+            if (string.IsNullOrWhiteSpace(source.Name)) { source.Name = CalendarSourceSettings.DefaultName(source.Provider); changed = true; }
+            if (source.SelectedCalendarIds == null) { source.SelectedCalendarIds = []; changed = true; }
+        }
+        return changed;
+    }
 }
 
 public sealed class CalendarState
 {
+    public string SourceId { get; set; } = "";
+    public string SourceName { get; set; } = "";
+    public string SourceKind { get; set; } = "";
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public string Color { get; set; } = "#6D7CFF";
@@ -93,6 +158,7 @@ public sealed class SettingsState
 {
     public string StatusMessage { get; set; } = "";
     public bool IsBusy { get; set; }
+    public string ActiveSourceId { get; set; } = "";
     public string GoogleAccountEmail { get; set; } = "";
     public List<CalendarState> Calendars { get; set; } = [];
 }
@@ -123,8 +189,11 @@ public static class SettingsStore
     {
         try
         {
-            if (!File.Exists(SettingsPath)) return new AppSettings();
-            return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath, Encoding.UTF8), JsonOptions) ?? new AppSettings();
+            var settings = !File.Exists(SettingsPath)
+                ? new AppSettings()
+                : JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath, Encoding.UTF8), JsonOptions) ?? new AppSettings();
+            settings.EnsureCalendarSources();
+            return settings;
         }
         catch (Exception error)
         {

@@ -14,23 +14,31 @@ public sealed partial class MainWindow : Window
     private static readonly string[] TimelineDateChoices = { "31.12.2026  (dd.MM.yyyy)", "12/31/2026  (MM/dd/yyyy)", "31/12/2026  (dd/MM/yyyy)", "2026-12-31  (yyyy-MM-dd)", "31 Dec 2026  (dd MMM yyyy)" };
     private readonly DispatcherTimer _stateTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly Dictionary<string, CheckBox> _calendarChecks = new();
+    private readonly Dictionary<string, CalendarSourceEditor> _calendarSourceEditors = new();
+    private readonly Dictionary<string, InfoBar> _googleStatuses = new();
     private readonly List<(TextBox Name, TextBox Url)> _bookmarkEditors = new();
     private AppSettings _settings = SettingsStore.Load();
     private string _page = "";
     private string _stateSignature = "";
 
-    private ComboBox? _widgetMode, _titleMode, _timeMode, _highlightStyle, _provider, _timelineDateFormat, _mapProvider;
+    private ComboBox? _widgetMode, _titleMode, _timeMode, _highlightStyle, _timelineDateFormat, _mapProvider;
     private Slider? _widgetWidth;
     private NumberBox? _offsetX, _offsetY, _titleLength, _highlightBefore, _highlightAfter, _refreshMinutes, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours, _timelinePastDays, _timelineFutureDays;
-    private TextBox? _widgetColor, _icsSources, _googleClientId, _browserPath, _browserArgs, _createUrl, _debugTitle, _debugColor;
+    private TextBox? _widgetColor, _googleClientId, _browserPath, _browserArgs, _createUrl, _debugTitle, _debugColor;
     private PasswordBox? _googleClientSecret;
     private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _winWWidget, _highlightMeetings, _highlightWholeMeeting, _allDay, _declined, _tentative, _free, _ignoreFreeTaskbar, _requireLink, _includePastDay, _includeNextDay, _fullDayEventList, _use24HourClock, _showTimelineDate;
     private ToggleSwitch? _notify, _fullScreen, _notifyEnd, _autoJoin, _hotkey, _startWithWindows;
-    private InfoBar? _googleStatus;
     private ComboBox? _debugService;
     private readonly Dictionary<int, CheckBox> _notificationChecks = new();
     private NumberBox? _debugStartMinutes, _debugDurationMinutes;
     private InfoBar? _debugStatus;
+
+    private sealed class CalendarSourceEditor
+    {
+        public required TextBox Name { get; init; }
+        public required ToggleSwitch Enabled { get; init; }
+        public TextBox? IcsSources { get; init; }
+    }
 
     public MainWindow()
     {
@@ -387,47 +395,102 @@ public sealed partial class MainWindow : Window
 
     private void BuildCalendarsPage()
     {
-        AddHeader("Calendars", "Connect a calendar source and choose which calendars are visible.", "\uE787");
-        AddSection("Calendar source");
-        _provider = Choice(new[] { "Classic Outlook", "ICS files or feeds", "Google Calendar" }, (int)_settings.Provider);
-        AddCard("Provider", "Outlook uses its local COM API. ICS accepts one file path or HTTPS feed per line.", _provider);
-        _icsSources = new TextBox { Text = _settings.IcsSources, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinWidth = 360, Height = 82 };
-        AddCard("ICS files and feed URLs", "One local .ics path or HTTPS URL per line.", _icsSources);
+        AddHeader("Calendars", "Combine multiple providers and accounts, then choose which calendars are visible.", "\uE787");
+        AddSection("Calendar sources");
+        var addButtons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        var addOutlook = new Button { Content = "Add Outlook", IsEnabled = !_settings.CalendarSources.Any(x => x.Provider == CalendarProviderKind.Outlook) };
+        addOutlook.Click += AddOutlookSource_Click;
+        var addIcs = new Button { Content = "Add ICS" }; addIcs.Click += AddIcsSource_Click;
+        var addGoogle = new Button { Content = "Add Google account", Style = (Style)Application.Current.Resources["AccentButtonStyle"] }; addGoogle.Click += AddGoogleSource_Click;
+        addButtons.Children.Add(addOutlook); addButtons.Children.Add(addIcs); addButtons.Children.Add(addGoogle);
+        AddCard("Add a calendar source", "Google accounts share the OAuth client below but keep separate encrypted sign-in tokens. Classic Outlook can be added once because its local API already returns every Outlook store.", addButtons);
 
-        AddSection("Google Calendar");
+        _calendarSourceEditors.Clear();
+        _googleStatuses.Clear();
+        var state = SettingsStore.LoadState();
+        foreach (var source in _settings.CalendarSources) BuildCalendarSourceCard(source, state);
+        if (_settings.CalendarSources.Count == 0) AddCard("No calendar sources", "Add Outlook, an ICS feed, or a Google account to begin.");
+
+        AddSection("Shared Google OAuth setup");
         BuildGoogleSetup();
 
         AddSection("Visible calendars");
         _calendarChecks.Clear();
-        var state = SettingsStore.LoadState();
         if (state.Calendars.Count == 0)
         {
-            AddCard("No calendars loaded yet", "Save, then refresh MeetingBar after connecting your provider.");
+            AddCard("No calendars loaded yet", "Save, connect any Google accounts, then refresh MeetingBar.");
         }
         else
         {
-            foreach (var calendar in state.Calendars)
+            foreach (var group in state.Calendars.GroupBy(x => x.SourceId))
             {
-                var selected = _settings.SelectedCalendarIds.Count == 0 || _settings.SelectedCalendarIds.Contains(calendar.Id);
-                var check = new CheckBox { IsChecked = selected, Content = calendar.Name, MinWidth = 260 };
-                _calendarChecks[calendar.Id] = check;
-                AddCard(calendar.Name, "Calendar color " + calendar.Color, check);
+                var source = _settings.CalendarSources.FirstOrDefault(x => x.Id == group.Key);
+                if (source == null) continue;
+                PagePanel.Children.Add(new TextBlock { Text = source.Name, FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Margin = new Thickness(8, 6, 0, 0) });
+                foreach (var calendar in group)
+                {
+                    var selected = !source.CalendarSelectionConfigured || source.SelectedCalendarIds.Contains(calendar.Id);
+                    var check = new CheckBox { IsChecked = selected, Content = calendar.Name, MinWidth = 260 };
+                    _calendarChecks[CalendarKey(source.Id, calendar.Id)] = check;
+                    AddCard(calendar.Name, calendar.SourceKind + " · Calendar color " + calendar.Color, check);
+                }
             }
         }
+    }
+
+    private void BuildCalendarSourceCard(CalendarSourceSettings source, SettingsState state)
+    {
+        var body = new StackPanel { Spacing = 10 };
+        var title = source.Provider switch { CalendarProviderKind.Ics => "ICS files or feeds", CalendarProviderKind.Google => "Google Calendar", _ => "Classic Outlook" };
+        body.Children.Add(new TextBlock { Text = title, FontSize = 15, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+        var name = new TextBox { Text = source.Name, Header = "Display name", MinWidth = 320 };
+        var enabled = new ToggleSwitch { IsOn = source.Enabled, Header = "Include this source", OnContent = "On", OffContent = "Off" };
+        body.Children.Add(name); body.Children.Add(enabled);
+        TextBox? icsSources = null;
+        if (source.Provider == CalendarProviderKind.Ics)
+        {
+            icsSources = new TextBox { Text = source.IcsSources, Header = "ICS files and HTTPS feed URLs (one per line)", AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinWidth = 420, Height = 90 };
+            body.Children.Add(icsSources);
+        }
+        if (source.Provider == CalendarProviderKind.Google)
+        {
+            body.Children.Add(new TextBlock { Text = string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? "Not connected" : "Account: " + source.GoogleAccountEmail, Foreground = ThemeBrush("TextFillColorSecondaryBrush") });
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            var connect = new Button { Content = string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? "Connect account" : "Reconnect / change account", Tag = source.Id, Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+            connect.Click += ConnectGoogle_Click;
+            var disconnect = new Button { Content = "Disconnect", Tag = source.Id, IsEnabled = !string.IsNullOrWhiteSpace(source.GoogleRefreshTokenProtected) };
+            disconnect.Click += DisconnectGoogle_Click;
+            buttons.Children.Add(connect); buttons.Children.Add(disconnect); body.Children.Add(buttons);
+            var active = string.Equals(state.ActiveSourceId, source.Id, StringComparison.OrdinalIgnoreCase);
+            var status = new InfoBar
+            {
+                IsOpen = active || !string.IsNullOrWhiteSpace(source.GoogleAccountEmail),
+                IsClosable = false,
+                Severity = active && state.IsBusy ? InfoBarSeverity.Informational : string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? InfoBarSeverity.Warning : InfoBarSeverity.Success,
+                Message = active && !string.IsNullOrWhiteSpace(state.StatusMessage) ? state.StatusMessage : string.IsNullOrWhiteSpace(source.GoogleAccountEmail) ? "Not connected" : "Connected as " + source.GoogleAccountEmail
+            };
+            _googleStatuses[source.Id] = status;
+            body.Children.Add(status);
+        }
+        var remove = new Button { Content = "Remove source", Tag = source.Id, HorizontalAlignment = HorizontalAlignment.Right };
+        remove.Click += RemoveCalendarSource_Click; body.Children.Add(remove);
+        _calendarSourceEditors[source.Id] = new CalendarSourceEditor { Name = name, Enabled = enabled, IcsSources = icsSources };
+        var card = new Border { Style = (Style)Application.Current.Resources["SettingsCardStyle"] };
+        card.Child = body; PagePanel.Children.Add(card);
     }
 
     private void BuildGoogleSetup()
     {
         var expander = new Expander
         {
-            IsExpanded = string.IsNullOrWhiteSpace(_settings.GoogleAccountEmail),
+            IsExpanded = string.IsNullOrWhiteSpace(_settings.GoogleClientId),
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Header = new StackPanel
             {
                 Children =
                 {
-                    new TextBlock { Text = "Connect Google Calendar", FontSize = 14, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold },
-                    new TextBlock { Text = string.IsNullOrWhiteSpace(_settings.GoogleAccountEmail) ? "Four guided steps · read-only access" : "Connected as " + _settings.GoogleAccountEmail, FontSize = 12, Foreground = ThemeBrush("TextFillColorSecondaryBrush") }
+                    new TextBlock { Text = "Google OAuth client", FontSize = 14, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold },
+                    new TextBlock { Text = "One client configuration for every Google account · read-only access", FontSize = 12, Foreground = ThemeBrush("TextFillColorSecondaryBrush") }
                 }
             }
         };
@@ -442,21 +505,6 @@ public sealed partial class MainWindow : Window
         body.Children.Add(_googleClientId);
         _googleClientSecret = new PasswordBox { Password = _settings.GoogleClientSecret, Header = "Client secret (hidden)", PasswordRevealMode = PasswordRevealMode.Hidden };
         body.Children.Add(_googleClientSecret);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        var connect = new Button { Content = "Connect Google Calendar", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
-        connect.Click += ConnectGoogle_Click;
-        var disconnect = new Button { Content = "Disconnect" };
-        disconnect.Click += DisconnectGoogle_Click;
-        buttons.Children.Add(connect); buttons.Children.Add(disconnect); body.Children.Add(buttons);
-        var state = SettingsStore.LoadState();
-        _googleStatus = new InfoBar
-        {
-            IsOpen = true,
-            IsClosable = false,
-            Severity = state.IsBusy ? InfoBarSeverity.Informational : string.IsNullOrWhiteSpace(_settings.GoogleAccountEmail) ? InfoBarSeverity.Warning : InfoBarSeverity.Success,
-            Message = !string.IsNullOrWhiteSpace(state.StatusMessage) ? state.StatusMessage : string.IsNullOrWhiteSpace(_settings.GoogleAccountEmail) ? "Not connected" : "Connected as " + _settings.GoogleAccountEmail
-        };
-        body.Children.Add(_googleStatus);
         expander.Content = body;
         var card = new Border { Style = (Style)Application.Current.Resources["SettingsCardStyle"], Padding = new Thickness(8, 2, 8, 2) };
         card.Child = expander;
@@ -486,32 +534,61 @@ public sealed partial class MainWindow : Window
     private async void ConnectGoogle_Click(object sender, RoutedEventArgs e)
     {
         CaptureCurrentPage();
+        if (sender is not Button { Tag: string sourceId }) return;
         if (string.IsNullOrWhiteSpace(_settings.GoogleClientId) || !_settings.GoogleClientId.EndsWith(".apps.googleusercontent.com", StringComparison.OrdinalIgnoreCase))
         {
-            if (_googleStatus != null) { _googleStatus.Severity = InfoBarSeverity.Error; _googleStatus.Message = "Enter the Desktop app client ID ending in .apps.googleusercontent.com."; }
+            if (_googleStatuses.TryGetValue(sourceId, out var invalidStatus)) { invalidStatus.IsOpen = true; invalidStatus.Severity = InfoBarSeverity.Error; invalidStatus.Message = "Enter the Desktop app client ID ending in .apps.googleusercontent.com below."; }
             return;
         }
         try
         {
             SettingsStore.Save(_settings);
-            if (_googleStatus != null) { _googleStatus.Severity = InfoBarSeverity.Informational; _googleStatus.Message = "Opening Google sign-in…"; }
-            await SettingsStore.SendCommandAsync("connect-google");
+            if (_googleStatuses.TryGetValue(sourceId, out var status)) { status.IsOpen = true; status.Severity = InfoBarSeverity.Informational; status.Message = "Opening Google sign-in…"; }
+            await SettingsStore.SendCommandAsync("connect-google|" + sourceId);
         }
         catch (Exception error)
         {
-            if (_googleStatus != null) { _googleStatus.Severity = InfoBarSeverity.Error; _googleStatus.Message = error.Message; }
+            if (_googleStatuses.TryGetValue(sourceId, out var status)) { status.IsOpen = true; status.Severity = InfoBarSeverity.Error; status.Message = error.Message; }
         }
     }
 
     private async void DisconnectGoogle_Click(object sender, RoutedEventArgs e)
     {
         CaptureCurrentPage();
-        _settings.GoogleRefreshTokenProtected = "";
-        _settings.GoogleAccountEmail = "";
+        if (sender is not Button { Tag: string sourceId }) return;
+        var source = _settings.CalendarSources.FirstOrDefault(x => x.Id == sourceId);
+        if (source == null) return;
+        source.GoogleRefreshTokenProtected = "";
+        source.GoogleAccountEmail = "";
         SettingsStore.Save(_settings);
         try { await SettingsStore.SendCommandAsync("reload"); } catch { }
-        if (_googleStatus != null) { _googleStatus.Severity = InfoBarSeverity.Warning; _googleStatus.Message = "Not connected"; }
+        _page = "";
+        ShowPage("Calendars");
     }
+
+    private void AddOutlookSource_Click(object sender, RoutedEventArgs e) => AddCalendarSource(CalendarProviderKind.Outlook);
+    private void AddIcsSource_Click(object sender, RoutedEventArgs e) => AddCalendarSource(CalendarProviderKind.Ics);
+    private void AddGoogleSource_Click(object sender, RoutedEventArgs e) => AddCalendarSource(CalendarProviderKind.Google);
+
+    private void AddCalendarSource(CalendarProviderKind provider)
+    {
+        CaptureCurrentPage();
+        if (provider == CalendarProviderKind.Outlook && _settings.CalendarSources.Any(x => x.Provider == provider)) return;
+        _settings.CalendarSources.Add(CalendarSourceSettings.Create(provider));
+        _page = "";
+        ShowPage("Calendars");
+    }
+
+    private void RemoveCalendarSource_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string sourceId }) return;
+        CaptureCurrentPage();
+        _settings.CalendarSources.RemoveAll(x => x.Id == sourceId);
+        _page = "";
+        ShowPage("Calendars");
+    }
+
+    private static string CalendarKey(string sourceId, string calendarId) => sourceId + "|" + calendarId;
 
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
     {
@@ -569,11 +646,24 @@ public sealed partial class MainWindow : Window
                 if (_winWWidget != null) _settings.EnableWinWWidget = _winWWidget.IsOn;
                 break;
             case "Calendars":
-                if (_provider != null) _settings.Provider = (CalendarProviderKind)Math.Max(0, _provider.SelectedIndex);
-                if (_icsSources != null) _settings.IcsSources = _icsSources.Text;
                 if (_googleClientId != null) _settings.GoogleClientId = _googleClientId.Text.Trim();
                 if (_googleClientSecret != null) _settings.GoogleClientSecret = _googleClientSecret.Password.Trim();
-                if (_calendarChecks.Count > 0) _settings.SelectedCalendarIds = _calendarChecks.Where(x => x.Value.IsChecked == true).Select(x => x.Key).ToList();
+                foreach (var source in _settings.CalendarSources)
+                {
+                    if (_calendarSourceEditors.TryGetValue(source.Id, out var editor))
+                    {
+                        source.Name = string.IsNullOrWhiteSpace(editor.Name.Text) ? CalendarSourceSettings.DefaultName(source.Provider) : editor.Name.Text.Trim();
+                        source.Enabled = editor.Enabled.IsOn;
+                        if (editor.IcsSources != null) source.IcsSources = editor.IcsSources.Text;
+                    }
+                    var prefix = source.Id + "|";
+                    var checks = _calendarChecks.Where(x => x.Key.StartsWith(prefix, StringComparison.Ordinal)).ToList();
+                    if (checks.Count > 0)
+                    {
+                        source.CalendarSelectionConfigured = true;
+                        source.SelectedCalendarIds = checks.Where(x => x.Value.IsChecked == true).Select(x => x.Key.Substring(prefix.Length)).ToList();
+                    }
+                }
                 break;
             case "Events":
                 if (_allDay != null) _settings.ShowAllDayEvents = _allDay.IsOn;
@@ -624,21 +714,18 @@ public sealed partial class MainWindow : Window
     private void StateTimer_Tick(object? sender, object e)
     {
         var state = SettingsStore.LoadState();
-        var signature = state.IsBusy + "|" + state.StatusMessage + "|" + state.GoogleAccountEmail + "|" + state.Calendars.Count;
+        var signature = state.IsBusy + "|" + state.ActiveSourceId + "|" + state.StatusMessage + "|" + state.GoogleAccountEmail + "|" + state.Calendars.Count;
         if (signature == _stateSignature) return;
         _stateSignature = signature;
-        if (_page == "Calendars" && _googleStatus != null)
+        if (_page == "Calendars" && !string.IsNullOrWhiteSpace(state.ActiveSourceId) && _googleStatuses.TryGetValue(state.ActiveSourceId, out var status))
         {
-            _googleStatus.Message = string.IsNullOrWhiteSpace(state.StatusMessage) ? "Not connected" : state.StatusMessage;
-            _googleStatus.Severity = state.IsBusy ? InfoBarSeverity.Informational : string.IsNullOrWhiteSpace(state.GoogleAccountEmail) ? InfoBarSeverity.Warning : InfoBarSeverity.Success;
+            status.IsOpen = true;
+            status.Message = string.IsNullOrWhiteSpace(state.StatusMessage) ? "Not connected" : state.StatusMessage;
+            status.Severity = state.IsBusy ? InfoBarSeverity.Informational : state.StatusMessage.StartsWith("Connected as ", StringComparison.OrdinalIgnoreCase) ? InfoBarSeverity.Success : InfoBarSeverity.Error;
         }
-        if (!state.IsBusy && !string.IsNullOrWhiteSpace(state.GoogleAccountEmail) && state.GoogleAccountEmail != _settings.GoogleAccountEmail)
+        if (!state.IsBusy && !string.IsNullOrWhiteSpace(state.ActiveSourceId))
         {
-            var disk = SettingsStore.Load();
-            _settings.GoogleRefreshTokenProtected = disk.GoogleRefreshTokenProtected;
-            _settings.GoogleAccountEmail = disk.GoogleAccountEmail;
-            _settings.Provider = disk.Provider;
-            _settings.SelectedCalendarIds = disk.SelectedCalendarIds;
+            _settings = SettingsStore.Load();
             if (_page == "Calendars")
             {
                 _page = "";
