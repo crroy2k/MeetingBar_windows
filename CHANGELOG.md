@@ -8,6 +8,7 @@
 
 - Added simultaneous multi-provider calendar sources, multiple Google and ICS accounts, shared Google OAuth client configuration with per-account encrypted tokens, per-source calendar selection, and automatic migration from the previous single-provider settings.
 - Added `webcal://` and `webcals://` subscription links for ICS calendar sources, fetched securely over HTTPS.
+- Added packaged Raycast for Windows Script Commands and a complete setup and troubleshooting guide.
 
 ### Fixed
 

@@ -57,6 +57,8 @@ if ($Package) {
         (Join-Path $root "bin\$Configuration\MeetingBar.exe")
         (Join-Path $root "bin\$Configuration\Settings")
         (Join-Path $root "bin\$Configuration\WinWWidget")
+        (Join-Path $root "raycast")
+        (Join-Path $root "docs")
         (Join-Path $root "README.md")
         (Join-Path $root "THIRD-PARTY-NOTICES.md")
         (Join-Path $root "LICENSE")
