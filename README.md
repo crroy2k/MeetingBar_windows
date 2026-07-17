@@ -35,9 +35,9 @@ Each source has its own visible-calendar selection. If one source fails to refre
 ## Surfaces
 
 - **Tray only**: icon only; Windows controls whether it is directly visible or inside the overflow menu.
-- **Near tray**: compact meeting title/time overlay immediately left of the notification area, plus tray icon.
+- **Taskbar right**: compact meeting title/time overlay immediately left of the notification area, plus tray icon.
 - **Taskbar left**: compact overlay at the far-left edge, plus tray icon.
-- **Windows Widgets Board**: optional native `Win+W` agenda card with current/next meeting, today's events, and Join/Open/Refresh actions. Enable it under **Settings > Widget**, then pin MeetingBar from the Windows widget picker.
+- **Windows Widgets Board (beta)**: optional native `Win+W` agenda card with current/next meeting, today's events, and Join/Open/Refresh actions. Enable it under **Settings > Widget**, then pin MeetingBar from the Windows widget picker.
 
 The taskbar versions are borderless topmost overlays. Windows 11 has no supported third-party text-widget slot inside its taskbar. Widget width shrinks to its event content; its maximum width and X/Y offsets are configurable for taskbar size, alignment, display scaling, and third-party taskbar tools. The full taskbar-height surface is interactive. At rest the widget has no border or background; its rounded hover surface uses the measured taskbar hover intensity and automatic light/dark text contrast, while the custom-color override applies to that hover surface. On Windows 11 22H2 or newer the popup uses always-on native acrylic composition, rounded DWM corners, the current Windows accent, and a DWM-synchronized 167 ms whole-window taskbar slide; older systems receive a solid fallback. A loading surface covers the calendar content until the first provider sync completes. Event lists use display-synchronized eased mouse-wheel scrolling, direct precision-touchpad scrolling, and a neutral auto-hiding overlay scrollbar. Settings is a native WinUI 3 window with NavigationView, Mica, Fluent cards and controls, composition scrolling, and automatic Windows light/dark, accent, localization, and high-contrast resources. Save applies and reloads changes without closing the window.
 
