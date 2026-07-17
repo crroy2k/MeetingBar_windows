@@ -14,6 +14,8 @@
 
 <!-- Wrote each entry in past tense and appended its issue when available, for example: "Fixed ... (#123)" -->
 
+- Fixed timeline meeting-title emojis that rendered as white Unicode glyphs instead of full-color emoji.
+
 ## 0.1.0 - 2026-07-17
 
 ### Added
