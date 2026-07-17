@@ -1,0 +1,83 @@
+name: Windows Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  publish-release:
+    name: Build, test, and publish release
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install .NET 8 SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Configure MSBuild
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+
+      - name: Build, test, and package Windows app
+        shell: pwsh
+        run: .\build.ps1 -Configuration Release -Test -Package
+
+      - name: Prepare versioned assets and release notes
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          if ($tag -notmatch '^v(?<version>\d+\.\d+\.\d+)$') {
+            throw "Unsupported release tag: $tag"
+          }
+
+          $version = $Matches.version
+          $dist = Join-Path $PWD 'dist'
+          $sourceZip = Join-Path $dist 'MeetingBar-Windows-portable.zip'
+          $releaseZip = Join-Path $dist "MeetingBar-Windows-$tag-portable.zip"
+          Move-Item $sourceZip $releaseZip -Force
+
+          $hash = (Get-FileHash $releaseZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $([System.IO.Path]::GetFileName($releaseZip))" |
+            Set-Content (Join-Path $dist 'SHA256SUMS.txt') -Encoding ascii
+
+          $changelog = Get-Content '.\CHANGELOG.md' -Raw
+          $escapedVersion = [regex]::Escape($version)
+          $releaseMatch = [regex]::Match(
+            $changelog,
+            "(?ims)^##[ \t]+(?:\[$escapedVersion\]|$escapedVersion)[^\r\n]*(?:\r?\n|\z)(?<notes>.*?)(?=^##[ \t]+|\z)"
+          )
+          if (!$releaseMatch.Success) {
+            throw "CHANGELOG.md does not contain a $version release section."
+          }
+
+          $notesPath = Join-Path $dist 'release-notes.md'
+          [System.IO.File]::WriteAllText(
+            $notesPath,
+            $releaseMatch.Groups['notes'].Value.Trim(),
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ github.ref_name }}'
+          gh release create $tag `
+            --repo $env:GITHUB_REPOSITORY `
+            --title "MeetingBar for Windows $tag" `
+            --notes-file '.\dist\release-notes.md' `
+            --verify-tag `
+            ".\dist\MeetingBar-Windows-$tag-portable.zip" `
+            '.\dist\SHA256SUMS.txt'
+          if ($LASTEXITCODE -ne 0) { throw "Could not publish release $tag." }
+
+          "Release: https://github.com/$env:GITHUB_REPOSITORY/releases/tag/$tag" >> $env:GITHUB_STEP_SUMMARY
