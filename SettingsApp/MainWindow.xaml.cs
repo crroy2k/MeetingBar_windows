@@ -238,7 +238,7 @@ public sealed partial class MainWindow : Window
         _declined = Toggle(_settings.ShowDeclinedEvents); AddCard("Declined events", "Keep meetings you declined in the list.", _declined);
         _tentative = Toggle(_settings.ShowTentativeEvents); AddCard("Tentative and pending events", "Include invitations that are not accepted yet.", _tentative);
         _free = Toggle(_settings.ShowFreeEvents); AddCard("Free and non-busy events", "Include events that do not block your calendar.", _free);
-        _ignoreFreeTaskbar = Toggle(_settings.IgnoreFreeEventsInTaskbar); AddCard("Ignore free events in taskbar", "Keep free events in the expanded popup, but skip them for the taskbar and tray preview.", _ignoreFreeTaskbar);
+        _ignoreFreeTaskbar = Toggle(_settings.IgnoreFreeEventsInTaskbar); AddCard("Ignore free events in taskbar and reminders", "Keep free events in the expanded popup, but skip them for the taskbar, tray preview, and reminders.", _ignoreFreeTaskbar);
         _requireLink = Toggle(_settings.RequireMeetingLink); AddCard("Require a meeting link", "Hide events that have no joinable video or web link.", _requireLink);
         AddSection("Event list range");
         _fullDayEventList = Toggle(_settings.ShowFullDayEventList); AddCard("Show complete days", "Show every event on each allowed day. When enabled, the hour values below affect only the timeline.", _fullDayEventList);
