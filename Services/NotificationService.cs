@@ -38,6 +38,9 @@ namespace MeetingBar.Windows.Services
             var now = DateTime.Now; var settings = _settings.Current;
             foreach (var item in (_events?.Invoke() ?? new List<CalendarEvent>()).Where(x => IsNotificationEligible(x, now)))
             {
+                var canSendReminders = IsNotificationEligible(item, settings, now);
+                if (canSendReminders)
+                {
                 foreach (var minutesBefore in ReminderOffsets(settings))
                 {
                     var notifyAt = item.Start.AddMinutes(-minutesBefore);
@@ -47,8 +50,9 @@ namespace MeetingBar.Windows.Services
                     if (settings.FullscreenReminder) new ReminderWindow(item, () => _opener.Open(item)).Show();
                     }
                 }
+                }
                 if (settings.AutoJoin && item.CanJoin && now >= item.Start.AddMinutes(-settings.AutoJoinMinutesBefore) && now < item.Start.AddMinutes(-settings.AutoJoinMinutesBefore).AddMinutes(1) && _sent.Add(item.Id + ":auto")) _opener.Open(item);
-                if (settings.NotifyAtEnd && now >= item.End && now < item.End.AddMinutes(1) && _sent.Add(item.Id + ":end"))
+                if (canSendReminders && settings.NotifyAtEnd && now >= item.End && now < item.End.AddMinutes(1) && _sent.Add(item.Id + ":end"))
                 { _tray.BalloonTipTitle = item.Title; _tray.BalloonTipText = "Meeting ended"; _tray.ShowBalloonTip(5000); }
             }
             _sent.RemoveWhere(id => !(_events?.Invoke() ?? new List<CalendarEvent>()).Any(x => id.StartsWith(x.Id + ":")));
@@ -60,6 +64,8 @@ namespace MeetingBar.Windows.Services
                 : settings.NotificationMinutesBefore ?? new List<int>();
             return values.Where(x => x >= 0 && x <= 120).Distinct().OrderByDescending(x => x).ToList();
         }
+        public static bool IsNotificationEligible(CalendarEvent item, AppSettings settings, DateTime now) =>
+            IsNotificationEligible(item, now) && (settings?.IgnoreFreeEventsInTaskbar != true || item.IsBusy);
         public static bool IsNotificationEligible(CalendarEvent item, DateTime now) => item != null && !item.IsDismissed && item.End > now.AddMinutes(-1);
         public void Dispose() => _timer.Stop();
     }

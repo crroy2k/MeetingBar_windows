@@ -171,6 +171,17 @@ namespace MeetingBar.Tests
                 Equal("free", EventWindowPolicy.NextTaskbarEvent(events, false, now).Id);
                 Equal("busy", EventWindowPolicy.NextTaskbarEvent(events, true, now).Id);
             });
+            Test("taskbar-ignored free meetings do not send reminders", () =>
+            {
+                var now = new DateTime(2026, 7, 16, 10, 0, 0);
+                var settings = new AppSettings { IgnoreFreeEventsInTaskbar = true };
+                var free = new CalendarEvent { Start = now.AddMinutes(5), End = now.AddMinutes(30), IsBusy = false };
+                var busy = new CalendarEvent { Start = now.AddMinutes(10), End = now.AddMinutes(40), IsBusy = true };
+                Equal(false, NotificationService.IsNotificationEligible(free, settings, now));
+                Equal(true, NotificationService.IsNotificationEligible(busy, settings, now));
+                settings.IgnoreFreeEventsInTaskbar = false;
+                Equal(true, NotificationService.IsNotificationEligible(free, settings, now));
+            });
             Test("taskbar widget applies end-of-day behavior only after today's events", () =>
             {
                 var now = new DateTime(2026, 7, 16, 18, 0, 0);
