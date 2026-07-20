@@ -50,6 +50,8 @@ public sealed class AppSettings
     public double WidgetWidth { get; set; } = 500;
     public double WidgetOffsetX { get; set; }
     public double WidgetOffsetY { get; set; }
+    public bool HideWidgetInFullscreen { get; set; }
+    public List<string> FullscreenAppBlacklist { get; set; } = [];
     public bool UseAutomaticWidgetColor { get; set; } = true;
     public string WidgetBackgroundColor { get; set; } = "#202020";
     public int WidgetSettingsVersion { get; set; } = 1;
@@ -196,6 +198,7 @@ public static class SettingsStore
                 ? new AppSettings()
                 : JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath, Encoding.UTF8), JsonOptions) ?? new AppSettings();
             settings.EnsureCalendarSources();
+            settings.FullscreenAppBlacklist ??= [];
             return settings;
         }
         catch (Exception error)

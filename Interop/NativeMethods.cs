@@ -9,6 +9,10 @@ namespace MeetingBar.Windows.Interop
         [DllImport("user32.dll", SetLastError = true)] public static extern IntPtr FindWindow(string className, string windowName);
         [DllImport("user32.dll", SetLastError = true)] public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string className, string windowName);
         [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+        [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+        [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+        [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+        [DllImport("user32.dll", CharSet = CharSet.Auto)] public static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
         [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hwnd);
         [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hwnd, int command);
         [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
@@ -22,10 +26,12 @@ namespace MeetingBar.Windows.Interop
         [DllImport("user32.dll")] public static extern bool UnregisterHotKey(IntPtr hwnd, int id);
         [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr icon);
         [StructLayout(LayoutKind.Sequential)] public struct MARGINS { public int Left, Right, Top, Bottom; }
+        [StructLayout(LayoutKind.Sequential)] public struct MONITORINFO { public int Size; public RECT Monitor; public RECT Work; public uint Flags; }
         [StructLayout(LayoutKind.Sequential)] private struct ACCENTPOLICY { public int State, Flags, GradientColor, AnimationId; }
         [StructLayout(LayoutKind.Sequential)] private struct WINDOWCOMPOSITIONATTRIBDATA { public int Attribute; public IntPtr Data; public int SizeOfData; }
         public const uint ModAlt = 0x0001, ModControl = 0x0002;
         public const int WmHotKey = 0x0312;
+        public const uint MonitorDefaultToNearest = 0x00000002;
         public static readonly IntPtr HwndTopmost = new IntPtr(-1);
         public const uint SwpNoSize = 0x0001, SwpNoMove = 0x0002, SwpNoZOrder = 0x0004, SwpNoActivate = 0x0010, SwpShowWindow = 0x0040, SwpNoSendChanging = 0x0400;
         public static bool EnableTransientBackdrop(IntPtr hwnd, bool dark, bool rounded = true)

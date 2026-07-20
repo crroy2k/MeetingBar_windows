@@ -79,6 +79,26 @@ namespace MeetingBar.Tests
             });
             Test("Win+W widget stays opt-in", () => Equal(false, new AppSettings().EnableWinWWidget));
             Test("taskbar widget keeps next-event behavior by default", () => Equal(EndOfDayWidgetBehavior.NextEvent, new AppSettings().EndOfDayWidgetBehavior));
+            Test("fullscreen widget hiding stays opt-in", () =>
+            {
+                var settings = new AppSettings();
+                Equal(false, settings.HideWidgetInFullscreen);
+                Equal(0, settings.FullscreenAppBlacklist.Count);
+            });
+            Test("fullscreen detection distinguishes monitor coverage from maximized windows", () =>
+            {
+                var monitor = new System.Drawing.Rectangle(0, 0, 1920, 1080);
+                Equal(true, FullscreenWidgetVisibilityService.CoversMonitor(new System.Drawing.Rectangle(0, 0, 1920, 1080), monitor));
+                Equal(true, FullscreenWidgetVisibilityService.CoversMonitor(new System.Drawing.Rectangle(-1, -1, 1922, 1082), monitor));
+                Equal(false, FullscreenWidgetVisibilityService.CoversMonitor(new System.Drawing.Rectangle(0, 0, 1920, 1040), monitor));
+            });
+            Test("fullscreen app blacklist prefers exact paths with a process-name fallback", () =>
+            {
+                var blacklist = new[] { "C:\\Games\\Example\\game.exe" };
+                Equal(true, FullscreenWidgetVisibilityService.MatchesBlacklist(blacklist, "c:\\games\\example\\GAME.exe", "game"));
+                Equal(false, FullscreenWidgetVisibilityService.MatchesBlacklist(blacklist, "C:\\Other\\game.exe", "game"));
+                Equal(true, FullscreenWidgetVisibilityService.MatchesBlacklist(blacklist, null, "GAME"));
+            });
             Test("requires Google Calendar read-only scope", () => { Equal(true, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/calendar.readonly")); Equal(false, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/userinfo.email")); });
             Test("explains disabled Google Calendar API", () => Contains("not enabled", GoogleCalendarProvider.ApiErrorMessage(System.Net.HttpStatusCode.Forbidden, "{\"error\":{\"errors\":[{\"reason\":\"accessNotConfigured\"}]}}")));
             Test("maps Google event-specific colors", () =>
