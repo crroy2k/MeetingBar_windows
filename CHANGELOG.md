@@ -16,6 +16,7 @@
 <!-- Wrote each entry in past tense and appended its issue when available, for example: "Fixed ... (#123)" -->
 
 - Prevented meetings marked as free from sending reminders when free events were ignored in the taskbar.
+- Kept the popup's current meeting synchronized with the taskbar widget when events were ignored or filtered.
 - Fixed timeline meeting-title emojis that rendered as white Unicode glyphs instead of full-color emoji.
 
 ## 0.1.0 - 2026-07-17

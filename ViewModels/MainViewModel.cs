@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -24,9 +23,9 @@ namespace MeetingBar.Windows.ViewModels
         public ObservableCollection<CalendarEvent> PageEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<CalendarEvent> TimelineEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<Bookmark> Bookmarks { get; } = new ObservableCollection<Bookmark>();
-        public CalendarEvent NextEvent => Events.FirstOrDefault(x => x.End > DateTime.Now && !x.IsDismissed);
         public CalendarEvent TaskbarEvent => EventWindowPolicy.NextTaskbarEvent(Events, _settings.Current.IgnoreFreeEventsInTaskbar, DateTime.Now);
         public CalendarEvent WidgetEvent => EventWindowPolicy.NextWidgetEvent(Events, _settings.Current, DateTime.Now);
+        public CalendarEvent NextEvent => WidgetEvent;
         public bool ShouldShowTaskbarWidget => _settings.Current.EndOfDayWidgetBehavior != EndOfDayWidgetBehavior.Hide || WidgetEvent != null;
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
         public bool IsRefreshing { get => _isRefreshing; set => Set(ref _isRefreshing, value); }
