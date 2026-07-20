@@ -171,6 +171,18 @@ namespace MeetingBar.Tests
                 Equal("free", EventWindowPolicy.NextTaskbarEvent(events, false, now).Id);
                 Equal("busy", EventWindowPolicy.NextTaskbarEvent(events, true, now).Id);
             });
+            Test("widget selection skips hidden all-day and ignored free meetings", () =>
+            {
+                var now = new DateTime(2026, 7, 16, 10, 0, 0);
+                var settings = new AppSettings { ShowAllDayEvents = false, IgnoreFreeEventsInTaskbar = true };
+                var events = new[]
+                {
+                    new CalendarEvent { Id = "all-day", Start = now.Date, End = now.Date.AddDays(1), IsAllDay = true, IsBusy = true },
+                    new CalendarEvent { Id = "free", Start = now.AddMinutes(-5), End = now.AddMinutes(25), IsBusy = false },
+                    new CalendarEvent { Id = "busy", Start = now.AddMinutes(10), End = now.AddMinutes(40), IsBusy = true }
+                };
+                Equal("busy", EventWindowPolicy.NextWidgetEvent(events, settings, now).Id);
+            });
             Test("taskbar-ignored free meetings do not send reminders", () =>
             {
                 var now = new DateTime(2026, 7, 16, 10, 0, 0);

@@ -52,7 +52,10 @@ namespace MeetingBar.Windows.Services
 
         public static CalendarEvent NextWidgetEvent(IEnumerable<CalendarEvent> events, AppSettings settings, DateTime now)
         {
-            var next = NextTaskbarEvent(events, settings?.IgnoreFreeEventsInTaskbar == true, now);
+            var candidates = settings?.ShowAllDayEvents == false
+                ? (events ?? Enumerable.Empty<CalendarEvent>()).Where(item => !item.IsAllDay)
+                : events;
+            var next = NextTaskbarEvent(candidates, settings?.IgnoreFreeEventsInTaskbar == true, now);
             if (next == null || settings == null || settings.EndOfDayWidgetBehavior == EndOfDayWidgetBehavior.NextEvent) return next;
             return next.Start.Date == now.Date || next.Start <= now ? next : null;
         }
