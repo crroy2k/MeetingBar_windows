@@ -72,6 +72,7 @@
     <Compile Include="Models\ProviderStatus.cs" />
     <Compile Include="Services\SettingsService.cs" />
     <Compile Include="Services\EventWindowPolicy.cs" />
+    <Compile Include="Services\FullscreenWidgetVisibilityService.cs" />
     <Compile Include="Services\DebugEventFactory.cs" />
     <Compile Include="Services\MeetingLinkDetector.cs" />
     <Compile Include="Services\IcsCalendarProvider.cs" />

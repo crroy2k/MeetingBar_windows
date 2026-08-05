@@ -46,6 +46,8 @@ namespace MeetingBar.Windows.Models
         public double WidgetWidth { get; set; } = 500;
         public double WidgetOffsetX { get; set; }
         public double WidgetOffsetY { get; set; }
+        public bool HideWidgetInFullscreen { get; set; }
+        public List<string> FullscreenAppBlacklist { get; set; } = new List<string>();
         public bool UseAutomaticWidgetColor { get; set; } = true;
         public string WidgetBackgroundColor { get; set; } = "#202020";
         public int WidgetSettingsVersion { get; set; }

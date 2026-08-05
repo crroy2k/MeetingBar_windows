@@ -115,15 +115,7 @@ namespace MeetingBar.Windows.Services
         private void ApplySettings()
         {
             _main.RefreshSettings();
-            if (_settings.Current.WidgetMode == WidgetMode.TrayOnly || !_main.ShouldShowTaskbarWidget)
-            {
-                _widget?.Hide();
-            }
-            else
-            {
-                if (_widget == null) CreateWidget();
-                _widget.ApplyPosition(_settings.Current); _widget.Show();
-            }
+            EnsureWidgetVisible();
             NativeMethods.UnregisterHotKey(_messageWindow.Handle, 1);
             if (_settings.Current.GlobalJoinHotkey) NativeMethods.RegisterHotKey(_messageWindow.Handle, 1, NativeMethods.ModControl | NativeMethods.ModAlt, (uint)Forms.Keys.J);
             _sync.Schedule(); UpdateTray();
@@ -137,7 +129,8 @@ namespace MeetingBar.Windows.Services
 
         private void EnsureWidgetVisible()
         {
-            if (_settings.Current.WidgetMode == WidgetMode.TrayOnly || !_main.ShouldShowTaskbarWidget)
+            if (_settings.Current.WidgetMode == WidgetMode.TrayOnly || !_main.ShouldShowTaskbarWidget
+                || FullscreenWidgetVisibilityService.ShouldHide(_settings.Current))
             {
                 _widget?.Hide();
                 return;

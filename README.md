@@ -52,6 +52,7 @@ The taskbar versions are borderless topmost overlays. Windows 11 has no supporte
 - Multiple selectable meeting notifications (including at start), optional full-screen reminder, end notification, auto-join
 - Configurable taskbar highlight before and during meetings, using the native hover surface or an animated in-progress shine
 - Configurable end-of-day taskbar behavior: hide the widget, show a standard or custom message, or continue showing the next event
+- Optional fullscreen-aware taskbar hiding, plus an app list for borderless games populated from running applications or an executable picker
 - Global `Ctrl+Alt+J` join shortcut
 - Local command forwarding for Raycast for Windows, PowerToys Run, scripts, and desktop shortcuts
 - Native WinUI Debug page for local-only injected events, test notifications, and full-screen reminder testing without modifying a real calendar

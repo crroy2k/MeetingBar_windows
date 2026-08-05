@@ -2,9 +2,11 @@ using System.Diagnostics;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
+using Windows.Storage.Pickers;
 
 namespace MeetingBar.SettingsApp;
 
@@ -28,6 +30,10 @@ public sealed partial class MainWindow : Window
     private PasswordBox? _googleClientSecret;
     private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _winWWidget, _highlightMeetings, _highlightWholeMeeting, _allDay, _declined, _tentative, _free, _ignoreFreeTaskbar, _requireLink, _includePastDay, _includeNextDay, _fullDayEventList, _use24HourClock, _showTimelineDate;
     private ToggleSwitch? _notify, _fullScreen, _notifyEnd, _autoJoin, _hotkey, _startWithWindows;
+    private ToggleSwitch? _hideWidgetInFullscreen;
+    private ComboBox? _runningFullscreenApp;
+    private Button? _addRunningFullscreenApp;
+    private StackPanel? _fullscreenAppList;
     private ComboBox? _debugService;
     private readonly Dictionary<int, CheckBox> _notificationChecks = new();
     private NumberBox? _debugStartMinutes, _debugDurationMinutes;
@@ -38,6 +44,13 @@ public sealed partial class MainWindow : Window
         public required TextBox Name { get; init; }
         public required ToggleSwitch Enabled { get; init; }
         public TextBox? IcsSources { get; init; }
+    }
+
+    private sealed class RunningAppOption
+    {
+        public required string Name { get; init; }
+        public required string Path { get; init; }
+        public string Display => Name + "  ·  " + System.IO.Path.GetFileName(Path);
     }
 
     public MainWindow()
@@ -149,6 +162,17 @@ public sealed partial class MainWindow : Window
         PagePanel.Children.Add(card);
     }
 
+    private void AddWideCard(string title, string description, FrameworkElement control)
+    {
+        var card = new Border { Style = (Style)Application.Current.Resources["SettingsCardStyle"] };
+        var content = new StackPanel { Spacing = 12 };
+        content.Children.Add(new TextBlock { Text = title, FontSize = 14, TextWrapping = TextWrapping.Wrap });
+        content.Children.Add(new TextBlock { Text = description, FontSize = 12, Foreground = ThemeBrush("TextFillColorSecondaryBrush"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, -8, 0, 0) });
+        content.Children.Add(control);
+        card.Child = content;
+        PagePanel.Children.Add(card);
+    }
+
     private static Brush ThemeBrush(string key)
     {
         if (Application.Current.Resources.TryGetValue(key, out var value) && value is Brush brush) return brush;
@@ -196,6 +220,14 @@ public sealed partial class MainWindow : Window
         _widgetColor = TextEntry(_settings.WidgetBackgroundColor, 170);
         AddCard("Custom widget color", "Used when automatic matching is off. Enter #RRGGBB.", _widgetColor);
 
+        AddSection("Fullscreen behavior");
+        _hideWidgetInFullscreen = Toggle(_settings.HideWidgetInFullscreen);
+        AddCard("Hide during fullscreen apps", "Temporarily hide only the taskbar widget while a game, video, or other app fills its monitor. The tray icon stays available.", _hideWidgetInFullscreen);
+        var fullscreenApps = BuildFullscreenAppEditor();
+        fullscreenApps.IsEnabled = _hideWidgetInFullscreen.IsOn;
+        _hideWidgetInFullscreen.Toggled += (_, _) => fullscreenApps.IsEnabled = _hideWidgetInFullscreen.IsOn;
+        AddWideCard("Also hide for selected apps", "Optional fallback for borderless or windowed games: hide whenever one of these apps is in the foreground. Add an app that is open now or browse for its executable.", fullscreenApps);
+
         AddSection("Display");
         _titleMode = Choice(Enum.GetNames<TitleMode>(), (int)_settings.TitleMode);
         AddCard("Meeting title", "Choose full title, a generic label, a dot, or hidden.", _titleMode);
@@ -228,6 +260,140 @@ public sealed partial class MainWindow : Window
         AddSection("Windows Widgets Board (beta)");
         _winWWidget = Toggle(_settings.EnableWinWWidget);
         AddCard("Win+W widget", "Register MeetingBar in the native Windows 11 widget picker. After saving, press Win+W, choose Add widgets, then pin MeetingBar. Developer Mode is required by this portable package.", _winWWidget);
+    }
+
+    private Control BuildFullscreenAppEditor()
+    {
+        _settings.FullscreenAppBlacklist ??= [];
+        var content = new StackPanel { Spacing = 10 };
+        var pickerRow = new Grid { ColumnSpacing = 8 };
+        pickerRow.ColumnDefinitions.Add(new ColumnDefinition());
+        pickerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        pickerRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        _runningFullscreenApp = new ComboBox { PlaceholderText = "Choose an open app", DisplayMemberPath = nameof(RunningAppOption.Display), HorizontalAlignment = HorizontalAlignment.Stretch };
+        _runningFullscreenApp.SelectionChanged += (_, _) => { if (_addRunningFullscreenApp != null) _addRunningFullscreenApp.IsEnabled = _runningFullscreenApp.SelectedItem != null; };
+        pickerRow.Children.Add(_runningFullscreenApp);
+
+        _addRunningFullscreenApp = new Button { Content = "Add", IsEnabled = false, MinWidth = 72 };
+        _addRunningFullscreenApp.Click += (_, _) =>
+        {
+            if (_runningFullscreenApp?.SelectedItem is RunningAppOption app) AddFullscreenApp(app.Path);
+        };
+        Grid.SetColumn(_addRunningFullscreenApp, 1);
+        pickerRow.Children.Add(_addRunningFullscreenApp);
+
+        var refresh = new Button { Content = new FontIcon { Glyph = "\uE72C", FontSize = 14 }, Width = 40 };
+        AutomationProperties.SetName(refresh, "Refresh open applications");
+        ToolTipService.SetToolTip(refresh, "Refresh open applications");
+        refresh.Click += (_, _) => RefreshRunningApps();
+        Grid.SetColumn(refresh, 2);
+        pickerRow.Children.Add(refresh);
+        content.Children.Add(pickerRow);
+
+        var browse = new Button { Content = "Browse for an executable", HorizontalAlignment = HorizontalAlignment.Left };
+        browse.Click += BrowseFullscreenApp_Click;
+        content.Children.Add(browse);
+
+        _fullscreenAppList = new StackPanel { Spacing = 6, Margin = new Thickness(0, 2, 0, 0) };
+        content.Children.Add(_fullscreenAppList);
+        RefreshRunningApps();
+        RebuildFullscreenAppList();
+        return new ContentControl { Content = content };
+    }
+
+    private void RefreshRunningApps()
+    {
+        if (_runningFullscreenApp == null) return;
+        var apps = new Dictionary<string, RunningAppOption>(StringComparer.OrdinalIgnoreCase);
+        foreach (var process in Process.GetProcesses())
+        {
+            using (process)
+            {
+                try
+                {
+                    if (process.MainWindowHandle == IntPtr.Zero || process.ProcessName.StartsWith("MeetingBar", StringComparison.OrdinalIgnoreCase)) continue;
+                    var path = process.MainModule?.FileName;
+                    if (string.IsNullOrWhiteSpace(path) || !path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
+                    var details = FileVersionInfo.GetVersionInfo(path);
+                    var name = details.FileDescription;
+                    if (string.IsNullOrWhiteSpace(name)) name = System.IO.Path.GetFileNameWithoutExtension(path);
+                    apps[path] = new RunningAppOption { Name = name, Path = path };
+                }
+                catch { }
+            }
+        }
+        _runningFullscreenApp.Items.Clear();
+        foreach (var app in apps.Values.OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)) _runningFullscreenApp.Items.Add(app);
+        _runningFullscreenApp.SelectedIndex = -1;
+        if (_addRunningFullscreenApp != null) _addRunningFullscreenApp.IsEnabled = false;
+    }
+
+    private async void BrowseFullscreenApp_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.ComputerFolder, ViewMode = PickerViewMode.List };
+            picker.FileTypeFilter.Add(".exe");
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+            var file = await picker.PickSingleFileAsync();
+            if (file != null) AddFullscreenApp(file.Path);
+        }
+        catch (Exception error)
+        {
+            SaveStatus.Severity = InfoBarSeverity.Error;
+            SaveStatus.Message = "Could not choose an application: " + error.Message;
+            SaveStatus.IsOpen = true;
+        }
+    }
+
+    private void AddFullscreenApp(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        try { path = System.IO.Path.GetFullPath(path); } catch { }
+        _settings.FullscreenAppBlacklist ??= [];
+        if (!_settings.FullscreenAppBlacklist.Contains(path, StringComparer.OrdinalIgnoreCase)) _settings.FullscreenAppBlacklist.Add(path);
+        RebuildFullscreenAppList();
+        if (_runningFullscreenApp != null) _runningFullscreenApp.SelectedIndex = -1;
+    }
+
+    private void RebuildFullscreenAppList()
+    {
+        if (_fullscreenAppList == null) return;
+        _fullscreenAppList.Children.Clear();
+        var paths = (_settings.FullscreenAppBlacklist ?? []).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(System.IO.Path.GetFileName, StringComparer.CurrentCultureIgnoreCase).ToList();
+        if (paths.Count == 0)
+        {
+            _fullscreenAppList.Children.Add(new TextBlock { Text = "No apps added. Automatic fullscreen detection still works.", FontSize = 12, Foreground = ThemeBrush("TextFillColorSecondaryBrush") });
+            return;
+        }
+
+        foreach (var path in paths)
+        {
+            var row = new Border { Background = ThemeBrush("SubtleFillColorSecondaryBrush"), CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 7, 7, 7) };
+            var grid = new Grid { ColumnSpacing = 10 };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition());
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.Children.Add(new FontIcon { Glyph = "\uE7C5", FontSize = 18, VerticalAlignment = VerticalAlignment.Center });
+            var label = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            label.Children.Add(new TextBlock { Text = System.IO.Path.GetFileNameWithoutExtension(path), FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+            label.Children.Add(new TextBlock { Text = path, FontSize = 11, Foreground = ThemeBrush("TextFillColorSecondaryBrush"), TextTrimming = TextTrimming.CharacterEllipsis });
+            Grid.SetColumn(label, 1);
+            grid.Children.Add(label);
+            var remove = new Button { Content = new FontIcon { Glyph = "\uE711", FontSize = 12 }, Width = 36, Height = 32, Padding = new Thickness(0) };
+            AutomationProperties.SetName(remove, "Remove " + System.IO.Path.GetFileNameWithoutExtension(path));
+            ToolTipService.SetToolTip(remove, "Remove");
+            remove.Click += (_, _) =>
+            {
+                (_settings.FullscreenAppBlacklist ??= []).RemoveAll(x => string.Equals(x, path, StringComparison.OrdinalIgnoreCase));
+                RebuildFullscreenAppList();
+            };
+            Grid.SetColumn(remove, 2);
+            grid.Children.Add(remove);
+            row.Child = grid;
+            _fullscreenAppList.Children.Add(row);
+        }
     }
 
     private void BuildEventsPage()
@@ -636,6 +802,7 @@ public sealed partial class MainWindow : Window
                 if (_widgetWidth != null) _settings.WidgetWidth = _widgetWidth.Value;
                 if (_offsetX != null) _settings.WidgetOffsetX = Finite(_offsetX.Value, 0);
                 if (_offsetY != null) _settings.WidgetOffsetY = Finite(_offsetY.Value, 0);
+                if (_hideWidgetInFullscreen != null) _settings.HideWidgetInFullscreen = _hideWidgetInFullscreen.IsOn;
                 if (_autoWidgetColor != null) _settings.UseAutomaticWidgetColor = _autoWidgetColor.IsOn;
                 if (_widgetColor != null) _settings.WidgetBackgroundColor = _widgetColor.Text.Trim();
                 if (_titleMode != null) _settings.TitleMode = (TitleMode)Math.Max(0, _titleMode.SelectedIndex);
