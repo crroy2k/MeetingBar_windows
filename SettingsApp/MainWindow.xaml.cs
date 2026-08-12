@@ -196,7 +196,7 @@ public sealed partial class MainWindow : Window
         Width = 150
     };
 
-    private static ToggleSwitch Toggle(bool value) => new() { IsOn = value, OnContent = "Ein", OffContent = "Aus", HorizontalAlignment = HorizontalAlignment.Right };
+    private static ToggleSwitch Toggle(bool value) => new() { IsOn = value, OnContent = "On", OffContent = "Off", HorizontalAlignment = HorizontalAlignment.Right };
 
     private static TextBox TextEntry(string value, double width = 310) => new() { Text = value ?? "", MinWidth = width };
 
@@ -543,7 +543,7 @@ public sealed partial class MainWindow : Window
         remove.Click += RemoveBookmark_Click;
         var controls = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         controls.Children.Add(name); controls.Children.Add(url); controls.Children.Add(remove);
-        AddCard("Meeting bookmark", "Name and join URL", controls);
+        AddWideCard("Meeting bookmark", "Name and join URL", controls);
         _bookmarkEditors.Add((name, url));
     }
 
