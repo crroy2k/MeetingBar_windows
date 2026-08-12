@@ -17,7 +17,15 @@
 Native Windows edition of MeetingBar. It shows the current or next meeting in the notification area and, optionally, in a taskbar-aligned widget. Every surface opens the same meeting popup. 
 
 > [!IMPORTANT]
-> The code and concept are based on the mac only https://meetingbar.app/
+> The code and concept are based on the macOS-only [MeetingBar](https://meetingbar.app/).
+
+## What it looks like
+
+<p align="center">
+  <img src="docs/screenshots/agenda.png" alt="MeetingBar agenda popup with a timeline, current meeting, upcoming events, meeting links, and bookmarks" width="410">
+  <br>
+  <sub>The agenda popup puts the current meeting, the rest of the day, tomorrow, and recurring rooms in one place. Timeline window is customisable.</sub>
+</p>
 
 
 ## Run
