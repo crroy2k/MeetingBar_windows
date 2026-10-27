@@ -53,6 +53,19 @@ namespace MeetingBar.Tests
                 var grouped = EventWindowPolicy.GroupAgenda(new[] { later, early, holiday });
                 Equal("holiday", grouped[0].Id); Equal("early", grouped[1].Id); Equal("later", grouped[2].Id);
             });
+            Test("hybrid timing switches below 24 hours and defaults to 12-hour time", () =>
+            {
+                var now = new DateTime(2026, 10, 27, 14, 0, 0);
+                var item = new CalendarEvent { Start = now.AddHours(24), End = now.AddHours(25) };
+                Equal(false, new AppSettings().Use24HourClock);
+                Equal("En 1 d", EventWindowPolicy.WidgetTiming(item, now, false));
+                item.Start = now.AddHours(23); item.End = item.Start.AddHours(1);
+                Equal("Mañana, 1:00 PM", EventWindowPolicy.WidgetTiming(item, now, false));
+                item.Start = now.AddMinutes(30); item.End = item.Start.AddHours(1);
+                Equal("Hoy, 2:30 PM", EventWindowPolicy.WidgetTiming(item, now, false));
+                item.Start = now.AddMinutes(-30); item.End = now.AddMinutes(45);
+                Equal("Quedan 45 min", EventWindowPolicy.WidgetTiming(item, now, false));
+            });
             Test("informational links are not join targets", () =>
             {
                 Equal<MeetingLinkResult>(null, MeetingLinkDetector.DetectText("Privacy https://example.com/privacy"));

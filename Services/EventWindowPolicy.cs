@@ -70,6 +70,23 @@ namespace MeetingBar.Windows.Services
             return day + ", " + CalendarEvent.FormatTime(item.Start, use24HourClock);
         }
 
+        public static string WidgetTiming(CalendarEvent item, DateTime now, bool use24HourClock)
+        {
+            if (item == null || item.IsAllDay) return WidgetWhen(item, now, use24HourClock);
+            if (item.End <= now) return "Finalizada";
+            if (item.Start <= now)
+            {
+                var remaining = item.End - now;
+                if (remaining.TotalMinutes < 1) return "Menos de 1 min";
+                var minutes = (int)Math.Ceiling(remaining.TotalMinutes);
+                return minutes >= 60 ? "Quedan " + minutes / 60 + " h " + minutes % 60 + " min" : "Quedan " + minutes + " min";
+            }
+            var until = item.Start - now;
+            if (until.TotalHours >= 24)
+                return "En " + (int)until.TotalDays + " d" + (until.Hours > 0 ? " " + until.Hours + " h" : "");
+            return WidgetWhen(item, now, use24HourClock);
+        }
+
         public static IReadOnlyList<CalendarEvent> GroupAgenda(IEnumerable<CalendarEvent> events) =>
             (events ?? Enumerable.Empty<CalendarEvent>()).OrderBy(item => item.Start.Date).ThenByDescending(item => item.IsAllDay).ThenBy(item => item.Start).ThenBy(item => item.End).ToList();
         public static bool ShouldRestoreDismissal(CalendarEvent item, DateTime now) => item != null && item.IsDismissed && item.End <= now;

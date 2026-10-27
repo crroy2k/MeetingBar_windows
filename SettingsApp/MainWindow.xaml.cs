@@ -231,7 +231,7 @@ public sealed partial class MainWindow : Window
         AddSection("Display");
         _titleMode = Choice(Enum.GetNames<TitleMode>(), (int)_settings.TitleMode);
         AddCard("Meeting title", "Choose full title, a generic label, a dot, or hidden.", _titleMode);
-        _timeMode = Choice(new[] { "Countdown", "Start time", "Hidden", "Fecha y hora" }, (int)_settings.TimeMode);
+        _timeMode = Choice(new[] { "Countdown", "Start time", "Hidden", "Restante / hora (<24 h)" }, (int)_settings.TimeMode);
         AddCard("Meeting time", "Controls the time text in the taskbar surface.", _timeMode);
         _ongoingTime = Toggle(_settings.ShowOngoingTimeRemaining);
         AddCard("Time remaining", "Show how much time is left during an ongoing meeting.", _ongoingTime);

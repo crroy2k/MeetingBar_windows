@@ -48,7 +48,7 @@ namespace MeetingBar.Windows.ViewModels
         public string TimelineDateFormat => _settings.Current.TimelineDateFormat;
         public string Header => NextEvent?.IsAllDay == true ? "TODO EL DÍA" : NextEvent?.IsCurrent == true ? "EN CURSO" : "PRÓXIMA CITA";
         public string NextTitle => NextEvent?.Title ?? "Sin citas próximas";
-        public string NextMeta => NextEvent == null ? (HasWidgetSubtitle ? WidgetSubtitle : StatusText) : EventWindowPolicy.WidgetWhen(NextEvent, DateTime.Now, _settings.Current.Use24HourClock);
+        public string NextMeta => NextEvent == null ? (HasWidgetSubtitle ? WidgetSubtitle : StatusText) : EventWindowPolicy.WidgetTiming(NextEvent, DateTime.Now, _settings.Current.Use24HourClock);
         public string WidgetTitle
         {
             get
@@ -70,7 +70,7 @@ namespace MeetingBar.Windows.ViewModels
             }
         }
         public string WidgetTime => WidgetEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : _settings.Current.TimeMode == TimeMode.DateAndTime
-            ? EventWindowPolicy.WidgetWhen(WidgetEvent, DateTime.Now, _settings.Current.Use24HourClock)
+            ? EventWindowPolicy.WidgetTiming(WidgetEvent, DateTime.Now, _settings.Current.Use24HourClock)
             : WidgetEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? WidgetEvent.Remaining : _settings.Current.TimeMode == TimeMode.StartTime ? CalendarEvent.FormatTime(WidgetEvent.Start, _settings.Current.Use24HourClock) : WidgetEvent.Countdown;
         public Visibility WidgetIconVisibility => WidgetEvent != null && _settings.Current.ShowServiceIcon ? Visibility.Visible : Visibility.Collapsed;
         public string WidgetEventColor => WidgetEvent?.CalendarColor ?? "#6D7CFF";

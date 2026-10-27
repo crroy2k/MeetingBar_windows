@@ -11,7 +11,7 @@ También se incluye el ZIP portable y `SHA256SUMS.txt`.
 ## Agenda compacta
 
 - La barra prioriza citas con hora sobre feriados y recordatorios de todo el día.
-- Muestra fecha y hora claras: Hoy, Mañana o la fecha completa.
+- Mantiene la cuenta regresiva si faltan 24 horas o más; a menos de 24 horas muestra la hora de inicio en formato de 12 horas (AM/PM). Durante la reunión muestra el tiempo restante.
 - La agenda separa Todo el día de Citas con hora.
 - Settings → Events permite incluir o excluir los eventos de todo el día de la barra sin ocultarlos de la agenda.
 - Si no hay citas próximas, muestra ese estado y debajo el próximo evento de todo el día, si existe.

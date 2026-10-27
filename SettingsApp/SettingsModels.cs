@@ -85,7 +85,7 @@ public sealed class AppSettings
     public int TimelinePastDays { get; set; } = 1;
     public int TimelineFutureDays { get; set; } = 1;
     public bool ShowFullDayEventList { get; set; } = true;
-    public bool Use24HourClock { get; set; } = true;
+    public bool Use24HourClock { get; set; } = false;
     public bool ShowTimelineDate { get; set; } = true;
     public string TimelineDateFormat { get; set; } = "dd.MM.yyyy";
     public int EventWindowSettingsVersion { get; set; } = 1;
