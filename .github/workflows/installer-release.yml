@@ -1,0 +1,75 @@
+name: Publish optimized Windows installer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: optimized-installer-release
+  cancel-in-progress: false
+
+jobs:
+  installer:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: 8.0.x
+      - name: Build and test application
+        shell: pwsh
+        run: |
+          ./build.ps1 -Configuration Release -Test -Package
+          if ($LASTEXITCODE -ne 0) { throw 'Application build or tests failed' }
+          dotnet build Installer/ConfigTool/ConfigTool.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Installer configuration tool build failed' }
+          ./Tests/bin/Release/net472/MeetingBar.Tests.exe --render-widget "$env:RUNNER_TEMP/widget-preview.png"
+          if ($LASTEXITCODE -ne 0) { throw 'Widget layout check failed' }
+      - name: Compile installer with preinstalled Inno Setup
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (!(Test-Path $compiler)) { throw 'Preinstalled Inno Setup compiler not found' }
+          & $compiler Installer/MeetingBar.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+      - name: Verify install, configuration preservation and uninstall
+        shell: pwsh
+        run: |
+          $configDir = Join-Path $env:APPDATA 'MeetingBar'
+          New-Item -ItemType Directory -Force $configDir | Out-Null
+          @{AutoJoin=$true;StartWithWindows=$false;InstallerTestMarker='preserved';Provider=0} | ConvertTo-Json | Set-Content (Join-Path $configDir 'settings.json')
+          $testDir = Join-Path $env:RUNNER_TEMP 'MeetingBarInstallerTest'
+          $installer = Join-Path $PWD 'dist/MeetingBar-Windows-v0.1.0.3-Setup.exe'
+          $result = Start-Process $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/NOICONS',('/DIR="'+$testDir+'"')) -WindowStyle Hidden -Wait -PassThru
+          if ($result.ExitCode -ne 0) { throw "Install failed: $($result.ExitCode)" }
+          if (!(Test-Path (Join-Path $testDir 'Settings/MeetingBar.Settings.exe'))) { throw 'Settings dependencies missing' }
+          $version = (Get-Item (Join-Path $testDir 'MeetingBar.exe')).VersionInfo.FileVersion
+          if ($version -ne '0.1.0.3') { throw "Unexpected binary version: $version" }
+          $settings = Get-Content (Join-Path $configDir 'settings.json') -Raw | ConvertFrom-Json
+          if ($settings.AutoJoin -ne $false -or $settings.InstallerTestMarker -ne 'preserved' -or $settings.StartWithWindows -ne $false) { throw 'Settings preservation failed' }
+          if (!(Test-Path (Join-Path $configDir 'settings.json.before-install.bak'))) { throw 'Configuration backup missing' }
+          $result = Start-Process (Join-Path $testDir 'unins000.exe') -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -WindowStyle Hidden -Wait -PassThru
+          if ($result.ExitCode -ne 0 -or (Test-Path (Join-Path $testDir 'MeetingBar.exe'))) { throw 'Uninstall failed' }
+      - name: Publish release and assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = 'v0.1.0.3'
+          Copy-Item dist/MeetingBar-Windows-portable.zip "dist/MeetingBar-Windows-$tag-portable.zip"
+          $assets = @("dist/MeetingBar-Windows-$tag-Setup.exe", "dist/MeetingBar-Windows-$tag-portable.zip")
+          $checksums = foreach ($asset in $assets) {
+            "$((Get-FileHash $asset -Algorithm SHA256).Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($asset))"
+          }
+          $checksums | Set-Content dist/SHA256SUMS.txt -Encoding ascii
+          $assets += 'dist/SHA256SUMS.txt'
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag @assets --clobber --repo $env:GITHUB_REPOSITORY
+          } else {
+            gh release create $tag @assets --target $env:GITHUB_SHA --title 'MeetingBar Windows v0.1.0.3 - optimizado con instalador' --notes-file Installer/RELEASE_NOTES.md --latest --repo $env:GITHUB_REPOSITORY
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

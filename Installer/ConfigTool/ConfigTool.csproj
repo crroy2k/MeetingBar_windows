@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net472</TargetFramework><AssemblyName>MeetingBar.InstallConfig</AssemblyName><LangVersion>latest</LangVersion></PropertyGroup>
+  <ItemGroup><Reference Include="System.Web.Extensions"/><PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all"/></ItemGroup>
+</Project>
