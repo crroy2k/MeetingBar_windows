@@ -11,7 +11,10 @@
         <Grid VerticalAlignment="Center" Margin="9,2,10,2">
           <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <Border Width="16" Height="16" CornerRadius="4" Background="{Binding WidgetEventColor}" VerticalAlignment="Center" Visibility="{Binding WidgetIconVisibility}"/>
-          <views:EmojiTextBlock Grid.Column="1" x:Name="WidgetTitle" EmojiText="{Binding WidgetTitle}" Style="{StaticResource EmojiText}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="32" FontSize="12" FontWeight="SemiBold" LineHeight="16" LineStackingStrategy="BlockLineHeight" VerticalAlignment="Center" Margin="6,0,5,0"/>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <views:EmojiTextBlock x:Name="WidgetTitle" EmojiText="{Binding WidgetTitle}" Style="{StaticResource EmojiText}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="32" FontSize="12" FontWeight="SemiBold" LineHeight="16" LineStackingStrategy="BlockLineHeight" VerticalAlignment="Center" Margin="6,0,5,0"/>
+          <TextBlock Text="{Binding WidgetSubtitle}" Visibility="{Binding HasWidgetSubtitle, Converter={StaticResource BooleanVisibility}}" Foreground="{StaticResource MutedBrush}" FontSize="10" LineHeight="14" LineStackingStrategy="BlockLineHeight" TextTrimming="CharacterEllipsis" Margin="6,0,5,0"/>
+          </StackPanel>
           <TextBlock Grid.Column="2" x:Name="WidgetTime" Text="{Binding WidgetTime}" Foreground="{StaticResource MutedBrush}" FontSize="11" LineHeight="17" LineStackingStrategy="BlockLineHeight" VerticalAlignment="Center"/>
         </Grid>
       </Grid>

@@ -28,7 +28,7 @@ public sealed partial class MainWindow : Window
     private NumberBox? _offsetX, _offsetY, _titleLength, _highlightBefore, _highlightAfter, _refreshMinutes, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours, _timelinePastDays, _timelineFutureDays;
     private TextBox? _widgetColor, _endOfDayCustomMessage, _googleClientId, _browserPath, _browserArgs, _createUrl, _debugTitle, _debugColor;
     private PasswordBox? _googleClientSecret;
-    private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _winWWidget, _highlightMeetings, _highlightWholeMeeting, _allDay, _declined, _tentative, _free, _ignoreFreeTaskbar, _requireLink, _includePastDay, _includeNextDay, _fullDayEventList, _use24HourClock, _showTimelineDate;
+    private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _winWWidget, _highlightMeetings, _highlightWholeMeeting, _allDay, _widgetAllDay, _declined, _tentative, _free, _ignoreFreeTaskbar, _requireLink, _includePastDay, _includeNextDay, _fullDayEventList, _use24HourClock, _showTimelineDate;
     private ToggleSwitch? _notify, _fullScreen, _notifyEnd, _autoJoin, _hotkey, _startWithWindows;
     private ToggleSwitch? _hideWidgetInFullscreen;
     private ComboBox? _runningFullscreenApp;
@@ -231,7 +231,7 @@ public sealed partial class MainWindow : Window
         AddSection("Display");
         _titleMode = Choice(Enum.GetNames<TitleMode>(), (int)_settings.TitleMode);
         AddCard("Meeting title", "Choose full title, a generic label, a dot, or hidden.", _titleMode);
-        _timeMode = Choice(new[] { "Countdown", "Start time", "Hidden" }, (int)_settings.TimeMode);
+        _timeMode = Choice(new[] { "Countdown", "Start time", "Hidden", "Fecha y hora" }, (int)_settings.TimeMode);
         AddCard("Meeting time", "Controls the time text in the taskbar surface.", _timeMode);
         _ongoingTime = Toggle(_settings.ShowOngoingTimeRemaining);
         AddCard("Time remaining", "Show how much time is left during an ongoing meeting.", _ongoingTime);
@@ -400,6 +400,7 @@ public sealed partial class MainWindow : Window
     {
         AddHeader("Events", "Control which calendar events appear in MeetingBar.", "\uE8FD");
         AddSection("Event filters");
+        _widgetAllDay = Toggle(_settings.IncludeAllDayEventsInWidget); AddCard("Incluir eventos de todo el día en la barra", "Las citas con hora tienen prioridad. Los feriados y recordatorios siguen visibles en la agenda.", _widgetAllDay);
         _allDay = Toggle(_settings.ShowAllDayEvents); AddCard("All-day events", "Show events without a specific time.", _allDay);
         _declined = Toggle(_settings.ShowDeclinedEvents); AddCard("Declined events", "Keep meetings you declined in the list.", _declined);
         _tentative = Toggle(_settings.ShowTentativeEvents); AddCard("Tentative and pending events", "Include invitations that are not accepted yet.", _tentative);
@@ -841,6 +842,7 @@ public sealed partial class MainWindow : Window
                 break;
             case "Events":
                 if (_allDay != null) _settings.ShowAllDayEvents = _allDay.IsOn;
+                if (_widgetAllDay != null) _settings.IncludeAllDayEventsInWidget = _widgetAllDay.IsOn;
                 if (_declined != null) _settings.ShowDeclinedEvents = _declined.IsOn;
                 if (_tentative != null) _settings.ShowTentativeEvents = _tentative.IsOn;
                 if (_free != null) _settings.ShowFreeEvents = _free.IsOn;

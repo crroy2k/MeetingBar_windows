@@ -14,6 +14,45 @@ namespace MeetingBar.Tests
         private static void Main(string[] args)
         {
             if (args.Length > 0 && args[0] == "--render-widget") { RenderWidget(args[1]); return; }
+            if (args.Length > 0 && args[0] == "--render-fallback") { RenderWidget(args[1], true); return; }
+            if (args.Length > 0 && args[0] == "--render-agenda") { RenderAgenda(args[1]); return; }
+            Test("timed appointments win over earlier all-day events", () =>
+            {
+                var now = new DateTime(2026, 10, 27, 8, 0, 0);
+                var holiday = new CalendarEvent { Id = "holiday", Start = now.Date, End = now.Date.AddDays(1), IsAllDay = true };
+                var appointment = new CalendarEvent { Id = "appointment", Start = now.AddDays(2), End = now.AddDays(2).AddHours(1) };
+                var settings = new AppSettings();
+                Equal(appointment, EventWindowPolicy.NextWidgetEvent(new[] { holiday, appointment }, settings, now));
+                Equal<CalendarEvent>(null, EventWindowPolicy.NextWidgetEvent(new[] { holiday }, settings, now));
+                settings.IncludeAllDayEventsInWidget = true;
+                Equal(appointment, EventWindowPolicy.NextWidgetEvent(new[] { holiday, appointment }, settings, now));
+                Equal(holiday, EventWindowPolicy.NextWidgetEvent(new[] { holiday }, settings, now));
+                Equal(2, EventWindowPolicy.GroupAgenda(new[] { holiday, appointment }).Count);
+            });
+            Test("compact dates distinguish today tomorrow future and ongoing appointments", () =>
+            {
+                var now = new DateTime(2026, 10, 27, 8, 0, 0);
+                var item = new CalendarEvent { Start = now.AddHours(1), End = now.AddHours(2) };
+                Equal("Hoy, 09:00", EventWindowPolicy.WidgetWhen(item, now, true));
+                item.Start = now.AddDays(1).AddHours(1); item.End = item.Start.AddHours(1);
+                Equal("Mañana, 09:00", EventWindowPolicy.WidgetWhen(item, now, true));
+                item.Start = new DateTime(2026, 11, 12, 9, 0, 0); item.End = item.Start.AddHours(1);
+                Contains("12 nov", EventWindowPolicy.WidgetWhen(item, now, true));
+                item.Start = now.AddHours(-1); item.End = now.AddHours(1);
+                Equal("Ahora · hasta 09:00", EventWindowPolicy.WidgetWhen(item, now, true));
+                item.IsAllDay = true;
+                Equal("Hoy · todo el día", EventWindowPolicy.WidgetWhen(item, now, true));
+                Equal("Todo el día", item.StartTimeText);
+            });
+            Test("agenda groups all-day events separately within each day", () =>
+            {
+                var today = new DateTime(2026, 10, 27);
+                var holiday = new CalendarEvent { Id = "holiday", Start = today, End = today.AddDays(1), IsAllDay = true };
+                var early = new CalendarEvent { Id = "early", Start = today.AddHours(8), End = today.AddHours(9) };
+                var later = new CalendarEvent { Id = "later", Start = today.AddHours(10), End = today.AddHours(11) };
+                var grouped = EventWindowPolicy.GroupAgenda(new[] { later, early, holiday });
+                Equal("holiday", grouped[0].Id); Equal("early", grouped[1].Id); Equal("later", grouped[2].Id);
+            });
             Test("informational links are not join targets", () =>
             {
                 Equal<MeetingLinkResult>(null, MeetingLinkDetector.DetectText("Privacy https://example.com/privacy"));
@@ -286,7 +325,7 @@ namespace MeetingBar.Tests
             Environment.ExitCode = _failed == 0 ? 0 : 1;
         }
 
-        private static void RenderWidget(string path)
+        private static void RenderWidget(string path, bool fallback = false)
         {
             System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
 
@@ -296,23 +335,56 @@ namespace MeetingBar.Tests
             typeof(SettingsService).GetField("<Current>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(service, settings);
             var sync = new CalendarSyncService(service);
             var title = "Project review | Progress, open questions and upcoming deliverables for the team";
-            sync.InjectDebugEvent(new CalendarEvent { Id = "layout-test", CalendarId = "meetingbar-debug", Title = title, Start = DateTime.Now.AddDays(16), End = DateTime.Now.AddDays(16).AddHours(1) });
+            sync.InjectDebugEvent(new CalendarEvent { Id = "layout-test", CalendarId = "meetingbar-debug", Title = title, Start = DateTime.Now.AddDays(16), End = DateTime.Now.AddDays(16).AddHours(1), IsAllDay = fallback });
             Equal(0, sync.Events.Count);
             Equal(1, sync.UpcomingEvents.Count);
             var vm = new MeetingBar.Windows.ViewModels.MainViewModel(sync, service, new MeetingOpener(service));
-            Equal(title, vm.WidgetTitle);
+            Equal(fallback ? "Sin citas próximas" : title, vm.WidgetTitle);
+            if (fallback) Contains(title, vm.WidgetSubtitle);
             var window = new TaskbarWidgetWindow(vm, () => { }); window.ShowActivated = false; window.Show(); window.ApplyPosition(settings);
             window.Measure(new System.Windows.Size(window.Width, window.Height));
             window.Arrange(new System.Windows.Rect(0, 0, window.Width, window.Height)); window.UpdateLayout();
             var text = (System.Windows.Controls.TextBlock)window.FindName("WidgetTitle");
             Equal(10.0, text.FontSize);
-            if (text.ActualHeight <= 15 || text.ActualHeight > 30.1) throw new Exception("Expected two visible title lines; height=" + text.ActualHeight);
+            if (fallback) Equal(14.0, text.ActualHeight);
+            else if (text.ActualHeight <= 15 || text.ActualHeight > 30.1) throw new Exception("Expected two visible title lines; height=" + text.ActualHeight);
+            var image = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.Width, (int)window.Height, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            image.Render(window);
+            var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(image));
+            using (var output = System.IO.File.Create(path)) encoder.Save(output);
+            window.SetDesiredVisibility(false);
+            window.EnsureAboveTaskbar();
+            Equal(false, window.IsVisible);
+            Equal(false, MeetingBar.Windows.Interop.NativeMethods.IsWindowVisible(new System.Windows.Interop.WindowInteropHelper(window).Handle));
+            vm.Dispose(); sync.Dispose(); window.Close();
+            Console.WriteLine(fallback ? "PASS no appointments shows a separate all-day subtitle" : "PASS next event survives a one-day agenda; long title renders as two lines at 10pt");
+        }
+
+        private static void RenderAgenda(string path)
+        {
+            System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
+            var app = new MeetingBar.Windows.App(); app.InitializeComponent();
+            var settings = new AppSettings { AutoJoin = false };
+            var service = (SettingsService)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(SettingsService));
+            typeof(SettingsService).GetField("<Current>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(service, settings);
+            var sync = new CalendarSyncService(service);
+            var today = DateTime.Today;
+            sync.InjectDebugEvent(new CalendarEvent { Id = "day", CalendarId = "meetingbar-debug", Title = "Recordatorio anual del equipo", Start = today, End = today.AddDays(1), IsAllDay = true });
+            sync.InjectDebugEvent(new CalendarEvent { Id = "timed", CalendarId = "meetingbar-debug", Title = "Revisión del proyecto", Start = DateTime.Now.AddMinutes(30), End = DateTime.Now.AddMinutes(90) });
+            var vm = new MeetingBar.Windows.ViewModels.MainViewModel(sync, service, new MeetingOpener(service));
+            typeof(MeetingBar.Windows.ViewModels.MainViewModel).GetField("_isInitialLoading", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(vm, false);
+            Equal(2, vm.PageEvents.Count);
+            Equal("TODO EL DÍA · FERIADOS Y RECORDATORIOS", vm.PageEvents[0].AgendaSectionHeader);
+            Equal("CITAS CON HORA", vm.PageEvents[1].AgendaSectionHeader);
+            Equal("timed", vm.WidgetEvent.Id);
+            var window = new PopupWindow(vm, () => { }); window.ShowActivated = false; window.Show();
+            window.Measure(new System.Windows.Size(window.Width, window.Height)); window.Arrange(new System.Windows.Rect(0, 0, window.Width, window.Height)); window.UpdateLayout();
             var image = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.Width, (int)window.Height, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
             image.Render(window);
             var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(image));
             using (var output = System.IO.File.Create(path)) encoder.Save(output);
             vm.Dispose(); sync.Dispose(); window.Close();
-            Console.WriteLine("PASS next event survives a one-day agenda; long title renders as two lines at 10pt");
+            Console.WriteLine("PASS agenda visually separates all-day reminders and timed appointments");
         }
 
         private static void Test(string name, Action action) { try { action(); Console.WriteLine("PASS " + name); } catch (Exception ex) { _failed++; Console.WriteLine("FAIL " + name + ": " + ex.Message); } }

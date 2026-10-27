@@ -6,7 +6,7 @@ namespace MeetingBar.Windows.Models
     public enum WidgetMode { TrayOnly, NearTray, TaskbarLeft }
     public enum CalendarProviderKind { Outlook, Ics, Google }
     public enum TitleMode { Full, Generic, Dot, Hidden }
-    public enum TimeMode { Countdown, StartTime, Hidden }
+    public enum TimeMode { Countdown, StartTime, Hidden, DateAndTime }
     public enum WidgetHighlightStyle { Hover, Shine }
     public enum EndOfDayWidgetBehavior { NextEvent, Hide, NoEventsToday, CustomMessage }
 
@@ -52,7 +52,7 @@ namespace MeetingBar.Windows.Models
         public string WidgetBackgroundColor { get; set; } = "#202020";
         public int WidgetSettingsVersion { get; set; }
         public TitleMode TitleMode { get; set; } = TitleMode.Full;
-        public TimeMode TimeMode { get; set; } = TimeMode.Countdown;
+        public TimeMode TimeMode { get; set; } = TimeMode.DateAndTime;
         public bool ShowOngoingTimeRemaining { get; set; } = true;
         public int TitleMaxLength { get; set; } = 64;
         public bool ShowServiceIcon { get; set; } = true;
@@ -65,6 +65,8 @@ namespace MeetingBar.Windows.Models
         public bool HighlightWholeMeeting { get; set; }
         public WidgetHighlightStyle WidgetHighlightStyle { get; set; } = WidgetHighlightStyle.Shine;
         public bool ShowAllDayEvents { get; set; } = true;
+        public bool IncludeAllDayEventsInWidget { get; set; }
+        public int CompactAgendaSettingsVersion { get; set; }
         public bool ShowDeclinedEvents { get; set; }
         public bool ShowTentativeEvents { get; set; } = true;
         public bool ShowFreeEvents { get; set; } = true;

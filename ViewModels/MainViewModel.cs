@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
@@ -23,9 +24,13 @@ namespace MeetingBar.Windows.ViewModels
         public ObservableCollection<CalendarEvent> PageEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<CalendarEvent> TimelineEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<Bookmark> Bookmarks { get; } = new ObservableCollection<Bookmark>();
-        public CalendarEvent TaskbarEvent => EventWindowPolicy.NextTaskbarEvent(_sync.UpcomingEvents, _settings.Current.IgnoreFreeEventsInTaskbar, DateTime.Now);
+        public CalendarEvent TaskbarEvent => WidgetEvent;
         public CalendarEvent WidgetEvent => EventWindowPolicy.NextWidgetEvent(_sync.UpcomingEvents, _settings.Current, DateTime.Now);
         public CalendarEvent NextEvent => WidgetEvent;
+        public CalendarEvent NextAllDayEvent => _sync.UpcomingEvents.FirstOrDefault(item => item.IsAllDay && !item.IsDismissed && item.End > DateTime.Now);
+        public string WidgetSubtitle => WidgetEvent == null && _settings.Current.EndOfDayWidgetBehavior == EndOfDayWidgetBehavior.NextEvent && NextAllDayEvent != null
+            ? EventWindowPolicy.WidgetWhen(NextAllDayEvent, DateTime.Now, _settings.Current.Use24HourClock) + " · " + NextAllDayEvent.Title : "";
+        public bool HasWidgetSubtitle => !string.IsNullOrEmpty(WidgetSubtitle);
         public bool ShouldShowTaskbarWidget => _settings.Current.EndOfDayWidgetBehavior != EndOfDayWidgetBehavior.Hide || WidgetEvent != null;
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
         public bool IsRefreshing { get => _isRefreshing; set => Set(ref _isRefreshing, value); }
@@ -41,9 +46,9 @@ namespace MeetingBar.Windows.ViewModels
         public bool Use24HourClock => _settings.Current.Use24HourClock;
         public bool ShowTimelineDate => _settings.Current.ShowTimelineDate;
         public string TimelineDateFormat => _settings.Current.TimelineDateFormat;
-        public string Header => NextEvent?.IsCurrent == true ? "CURRENT MEETING" : "NEXT MEETING";
-        public string NextTitle => NextEvent?.Title ?? "No upcoming meetings";
-        public string NextMeta => NextEvent == null ? StatusText : NextEvent.TimeRange + "  •  " + (NextEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? NextEvent.Remaining : NextEvent.Countdown);
+        public string Header => NextEvent?.IsAllDay == true ? "TODO EL DÍA" : NextEvent?.IsCurrent == true ? "EN CURSO" : "PRÓXIMA CITA";
+        public string NextTitle => NextEvent?.Title ?? "Sin citas próximas";
+        public string NextMeta => NextEvent == null ? (HasWidgetSubtitle ? WidgetSubtitle : StatusText) : EventWindowPolicy.WidgetWhen(NextEvent, DateTime.Now, _settings.Current.Use24HourClock);
         public string WidgetTitle
         {
             get
@@ -54,7 +59,7 @@ namespace MeetingBar.Windows.ViewModels
                     {
                         case EndOfDayWidgetBehavior.NoEventsToday: return "No events for today";
                         case EndOfDayWidgetBehavior.CustomMessage: return TruncateWidgetTitle(string.IsNullOrWhiteSpace(_settings.Current.EndOfDayCustomMessage) ? "Done for today" : _settings.Current.EndOfDayCustomMessage.Trim());
-                        default: return "No upcoming meetings";
+                        default: return "Sin citas próximas";
                     }
                 }
                 var mode = _settings.Current.TitleMode;
@@ -64,7 +69,9 @@ namespace MeetingBar.Windows.ViewModels
                 return WidgetEvent.Title ?? "Untitled event";
             }
         }
-        public string WidgetTime => WidgetEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : WidgetEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? WidgetEvent.Remaining : _settings.Current.TimeMode == TimeMode.StartTime ? CalendarEvent.FormatTime(WidgetEvent.Start, _settings.Current.Use24HourClock) : WidgetEvent.Countdown;
+        public string WidgetTime => WidgetEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : _settings.Current.TimeMode == TimeMode.DateAndTime
+            ? EventWindowPolicy.WidgetWhen(WidgetEvent, DateTime.Now, _settings.Current.Use24HourClock)
+            : WidgetEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? WidgetEvent.Remaining : _settings.Current.TimeMode == TimeMode.StartTime ? CalendarEvent.FormatTime(WidgetEvent.Start, _settings.Current.Use24HourClock) : WidgetEvent.Countdown;
         public Visibility WidgetIconVisibility => WidgetEvent != null && _settings.Current.ShowServiceIcon ? Visibility.Visible : Visibility.Collapsed;
         public string WidgetEventColor => WidgetEvent?.CalendarColor ?? "#6D7CFF";
         public bool CanJoinNext => NextEvent?.CanJoin == true;
@@ -144,10 +151,13 @@ namespace MeetingBar.Windows.ViewModels
             _selectedDayOffset = Math.Max(minimum, Math.Min(maximum, dayOffset));
             PageEvents.Clear();
             DateTime? previousDay = null;
-            foreach (var item in EventWindowPolicy.Page(TimelineEvents, _settings.Current, _selectedDayOffset, DateTime.Now))
+            bool? previousAllDay = null;
+            foreach (var item in EventWindowPolicy.GroupAgenda(EventWindowPolicy.Page(TimelineEvents, _settings.Current, _selectedDayOffset, DateTime.Now)))
             {
                 item.ShowDayDivider = previousDay.HasValue && previousDay.Value != item.Start.Date;
+                item.AgendaSectionHeader = previousDay != item.Start.Date || previousAllDay != item.IsAllDay ? (item.IsAllDay ? "TODO EL DÍA · FERIADOS Y RECORDATORIOS" : "CITAS CON HORA") : "";
                 previousDay = item.Start.Date;
+                previousAllDay = item.IsAllDay;
                 PageEvents.Add(item);
             }
             Raise(nameof(HasEvents));
@@ -157,8 +167,8 @@ namespace MeetingBar.Windows.ViewModels
             var max = Math.Max(5, _settings.Current.TitleMaxLength);
             return title.Length > max ? title.Substring(0, max - 1) + "…" : title;
         }
-        private void RaiseComputed() { Raise(nameof(NextEvent)); Raise(nameof(TaskbarEvent)); Raise(nameof(WidgetEvent)); Raise(nameof(ShouldShowTaskbarWidget)); Raise(nameof(Header)); Raise(nameof(NextTitle)); Raise(nameof(NextMeta)); Raise(nameof(WidgetTitle)); Raise(nameof(WidgetTime)); Raise(nameof(WidgetIconVisibility)); Raise(nameof(WidgetEventColor)); Raise(nameof(CanJoinNext)); Raise(nameof(CanOpenCalendar)); Raise(nameof(HasEvents)); Raise(nameof(HasBookmarks)); Raise(nameof(TimelinePastHours)); Raise(nameof(TimelineFutureHours)); Raise(nameof(TimelineIncludesPastDay)); Raise(nameof(TimelineIncludesNextDay)); Raise(nameof(TimelinePastDays)); Raise(nameof(TimelineFutureDays)); Raise(nameof(Use24HourClock)); Raise(nameof(ShowTimelineDate)); Raise(nameof(TimelineDateFormat)); Raise(nameof(LoadingVisibility)); }
-        public void RefreshSettings() { _isInitialLoading = true; RaiseComputed(); }
+        private void RaiseComputed() { Raise(nameof(NextAllDayEvent)); Raise(nameof(WidgetSubtitle)); Raise(nameof(HasWidgetSubtitle)); Raise(nameof(NextEvent)); Raise(nameof(TaskbarEvent)); Raise(nameof(WidgetEvent)); Raise(nameof(ShouldShowTaskbarWidget)); Raise(nameof(Header)); Raise(nameof(NextTitle)); Raise(nameof(NextMeta)); Raise(nameof(WidgetTitle)); Raise(nameof(WidgetTime)); Raise(nameof(WidgetIconVisibility)); Raise(nameof(WidgetEventColor)); Raise(nameof(CanJoinNext)); Raise(nameof(CanOpenCalendar)); Raise(nameof(HasEvents)); Raise(nameof(HasBookmarks)); Raise(nameof(TimelinePastHours)); Raise(nameof(TimelineFutureHours)); Raise(nameof(TimelineIncludesPastDay)); Raise(nameof(TimelineIncludesNextDay)); Raise(nameof(TimelinePastDays)); Raise(nameof(TimelineFutureDays)); Raise(nameof(Use24HourClock)); Raise(nameof(ShowTimelineDate)); Raise(nameof(TimelineDateFormat)); Raise(nameof(LoadingVisibility)); }
+        public void RefreshSettings() { RaiseComputed(); }
         public void Dispose() { _sync.Changed -= SyncChanged; _clock.Stop(); }
     }
 }

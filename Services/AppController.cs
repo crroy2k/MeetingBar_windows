@@ -133,10 +133,11 @@ namespace MeetingBar.Windows.Services
             if (_settings.Current.WidgetMode == WidgetMode.TrayOnly || !_main.ShouldShowTaskbarWidget
                 || FullscreenWidgetVisibilityService.ShouldHide(_settings.Current))
             {
-                _widget?.Hide();
+                _widget?.SetDesiredVisibility(false);
                 return;
             }
             if (_widget == null) CreateWidget();
+            _widget.SetDesiredVisibility(true);
             if (!_widget.IsVisible) _widget.Show();
             var widgetHandle = new WindowInteropHelper(_widget).Handle;
             if (widgetHandle != IntPtr.Zero && !NativeMethods.IsWindowVisible(widgetHandle)) NativeMethods.ShowWindow(widgetHandle, 5);

@@ -9,6 +9,9 @@ namespace MeetingBar.Windows.Interop
         [DllImport("user32.dll", SetLastError = true)] public static extern IntPtr FindWindow(string className, string windowName);
         [DllImport("user32.dll", SetLastError = true)] public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr childAfter, string className, string windowName);
         [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+        public delegate void WinEventCallback(IntPtr hook, uint eventType, IntPtr hwnd, int objectId, int childId, uint thread, uint time);
+        [DllImport("user32.dll")] public static extern IntPtr SetWinEventHook(uint minimum, uint maximum, IntPtr module, WinEventCallback callback, uint processId, uint threadId, uint flags);
+        [DllImport("user32.dll")] public static extern bool UnhookWinEvent(IntPtr hook);
         [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
         [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);

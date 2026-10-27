@@ -34,13 +34,15 @@ namespace MeetingBar.Windows.Models
         public bool IsDismissed { get; set; }
         public bool Use24HourClock { get; set; } = true;
         public bool ShowDayDivider { get; set; }
+        public string AgendaSectionHeader { get; set; }
+        public bool ShowAgendaSectionHeader => !string.IsNullOrEmpty(AgendaSectionHeader);
 
         public bool IsCurrent => Start <= DateTime.Now && End > DateTime.Now;
         public bool IsPast => End <= DateTime.Now;
         public bool CanJoin => !string.IsNullOrWhiteSpace(MeetingUrl);
         public bool CanRestoreNotifications => IsDismissed && !IsPast;
         public bool CanOpenDetails => !string.IsNullOrWhiteSpace(CalendarOpenUrl);
-        public string StartTimeText => FormatTime(Start, Use24HourClock);
+        public string StartTimeText => IsAllDay ? "Todo el día" : FormatTime(Start, Use24HourClock);
         public string TimeRange => IsAllDay ? "All day" : FormatTime(Start, Use24HourClock) + " – " + FormatTime(End, Use24HourClock);
         public string DayLabel => Start.Date == DateTime.Today ? "TODAY" : Start.Date == DateTime.Today.AddDays(1) ? "TOMORROW" : Start.ToString("ddd, d MMM").ToUpperInvariant();
         public static string FormatTime(DateTime value, bool use24HourClock, bool hourOnly = false) => value.ToString(

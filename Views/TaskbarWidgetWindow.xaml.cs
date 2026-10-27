@@ -25,24 +25,58 @@ namespace MeetingBar.Windows.Views
         private string _layoutKey;
         private string _appearanceKey;
         private double _cachedWidth;
+        private bool _desiredVisible = true;
+        private bool _repairQueued;
+        private IntPtr _foregroundHook, _shellHook, _taskbarHandle;
+        private NativeMethods.WinEventCallback _shellEvent;
         public TaskbarWidgetWindow(MainViewModel vm, Action clicked)
         {
             InitializeComponent();
             DataContext = vm; _clicked = clicked;
             SystemEvents.UserPreferenceChanged += ThemeChanged;
-            Closed += (s, e) => SystemEvents.UserPreferenceChanged -= ThemeChanged;
+            Closed += (s, e) =>
+            {
+                _desiredVisible = false;
+                SystemEvents.UserPreferenceChanged -= ThemeChanged;
+                if (_foregroundHook != IntPtr.Zero) NativeMethods.UnhookWinEvent(_foregroundHook);
+                if (_shellHook != IntPtr.Zero) NativeMethods.UnhookWinEvent(_shellHook);
+            };
             SourceInitialized += (s, e) =>
             {
                 var handle = new WindowInteropHelper(this).Handle;
                 var source = HwndSource.FromHwnd(handle); source?.AddHook(WndProc);
+                _taskbarHandle = NativeMethods.FindWindow("Shell_TrayWnd", null);
+                _shellEvent = (hook, eventType, hwnd, objectId, childId, thread, time) =>
+                {
+                    if (eventType == 3 || hwnd == _taskbarHandle) QueueVisibilityRepair();
+                };
+                // Restore z-order when Explorer or another foreground window redraws the taskbar.
+                // Event-driven repair avoids a faster background polling loop.
+                _foregroundHook = NativeMethods.SetWinEventHook(3, 3, IntPtr.Zero, _shellEvent, 0, 0, 2);
+                _shellHook = NativeMethods.SetWinEventHook(0x8002, 0x8002, IntPtr.Zero, _shellEvent, 0, 0, 2);
                 EnsureAboveTaskbar();
             };
         }
         private void ThemeChanged(object sender, UserPreferenceChangedEventArgs e) => Dispatcher.BeginInvoke(new Action(() => { _appearanceKey = null; _layoutKey = null; }));
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
-            if (msg == 0x001C) Dispatcher.BeginInvoke(new Action(EnsureAboveTaskbar));
+            if (msg == 0x001C || msg == 0x0018 && wParam == IntPtr.Zero) QueueVisibilityRepair();
             return IntPtr.Zero;
+        }
+        private void QueueVisibilityRepair()
+        {
+            if (!_desiredVisible || _repairQueued || Dispatcher.HasShutdownStarted) return;
+            _repairQueued = true;
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
+            {
+                _repairQueued = false;
+                if (_desiredVisible) EnsureAboveTaskbar();
+            }));
+        }
+        public void SetDesiredVisibility(bool visible)
+        {
+            _desiredVisible = visible;
+            if (!visible && IsVisible) Hide();
         }
         private void Widget_Click(object sender, RoutedEventArgs e) => _clicked();
         private void WidgetSurface_SizeChanged(object sender, SizeChangedEventArgs e) =>
@@ -71,6 +105,7 @@ namespace MeetingBar.Windows.Views
         }
         public void EnsureAboveTaskbar()
         {
+            if (!_desiredVisible) return;
             var handle = new WindowInteropHelper(this).Handle;
             if (handle != IntPtr.Zero) NativeMethods.SetWindowPos(handle, NativeMethods.HwndTopmost, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow);
         }
@@ -78,17 +113,18 @@ namespace MeetingBar.Windows.Views
         {
             var vm = DataContext as MainViewModel;
             var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-            var key = string.Join("|", vm?.WidgetTitle, vm?.WidgetTime, settings.WidgetWidth, settings.ShowServiceIcon, pixelsPerDip);
+            var key = string.Join("|", vm?.WidgetTitle, vm?.WidgetSubtitle, vm?.WidgetTime, settings.WidgetWidth, settings.ShowServiceIcon, pixelsPerDip);
             if (_layoutKey == key) return _cachedWidth;
             _layoutKey = key;
             var title = Measure(vm?.WidgetTitle, 12, FontWeights.SemiBold, "Segoe UI", pixelsPerDip);
             var time = Measure(vm?.WidgetTime, 11, FontWeights.Normal, "Segoe UI", pixelsPerDip);
+            title = Math.Max(title, Measure(vm?.WidgetSubtitle, 10, FontWeights.Normal, "Segoe UI", pixelsPerDip));
             var content = 32 + (settings.ShowServiceIcon ? 16 : 0) + title + time;
             var available = Math.Max(40, settings.WidgetWidth - 32 - (settings.ShowServiceIcon ? 16 : 0) - time);
             var wraps = title > available;
-            WidgetTitle.FontSize = wraps ? 10 : 12;
-            WidgetTitle.LineHeight = wraps ? 15 : 18;
-            WidgetTitle.MaxHeight = wraps ? 30 : 18;
+            WidgetTitle.FontSize = wraps || vm?.HasWidgetSubtitle == true ? 10 : 12;
+            WidgetTitle.LineHeight = vm?.HasWidgetSubtitle == true ? 14 : wraps ? 15 : 18;
+            WidgetTitle.MaxHeight = vm?.HasWidgetSubtitle == true ? 14 : wraps ? 30 : 18;
             return _cachedWidth = Clamp(Math.Ceiling(content), 140, Math.Max(140, settings.WidgetWidth));
         }
         private void ApplyAppearance(AppSettings settings)

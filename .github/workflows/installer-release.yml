@@ -28,6 +28,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Installer configuration tool build failed' }
           ./Tests/bin/Release/net472/MeetingBar.Tests.exe --render-widget "$env:RUNNER_TEMP/widget-preview.png"
           if ($LASTEXITCODE -ne 0) { throw 'Widget layout check failed' }
+          ./Tests/bin/Release/net472/MeetingBar.Tests.exe --render-fallback "$env:RUNNER_TEMP/widget-fallback.png"
+          if ($LASTEXITCODE -ne 0) { throw 'Fallback layout check failed' }
+          ./Tests/bin/Release/net472/MeetingBar.Tests.exe --render-agenda "$env:RUNNER_TEMP/compact-agenda.png"
+          if ($LASTEXITCODE -ne 0) { throw 'Agenda grouping check failed' }
       - name: Compile installer with preinstalled Inno Setup
         shell: pwsh
         run: |
@@ -42,12 +46,12 @@ jobs:
           New-Item -ItemType Directory -Force $configDir | Out-Null
           @{AutoJoin=$true;StartWithWindows=$false;InstallerTestMarker='preserved';Provider=0} | ConvertTo-Json | Set-Content (Join-Path $configDir 'settings.json')
           $testDir = Join-Path $env:RUNNER_TEMP 'MeetingBarInstallerTest'
-          $installer = Join-Path $PWD 'dist/MeetingBar-Windows-v0.1.0.3-Setup.exe'
+          $installer = Join-Path $PWD 'dist/MeetingBar-Windows-v0.1.0.4-Setup.exe'
           $result = Start-Process $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/NOICONS',('/DIR="'+$testDir+'"')) -WindowStyle Hidden -Wait -PassThru
           if ($result.ExitCode -ne 0) { throw "Install failed: $($result.ExitCode)" }
           if (!(Test-Path (Join-Path $testDir 'Settings/MeetingBar.Settings.exe'))) { throw 'Settings dependencies missing' }
           $version = (Get-Item (Join-Path $testDir 'MeetingBar.exe')).VersionInfo.FileVersion
-          if ($version -ne '0.1.0.3') { throw "Unexpected binary version: $version" }
+          if ($version -ne '0.1.0.4') { throw "Unexpected binary version: $version" }
           $settings = Get-Content (Join-Path $configDir 'settings.json') -Raw | ConvertFrom-Json
           if ($settings.AutoJoin -ne $false -or $settings.InstallerTestMarker -ne 'preserved' -or $settings.StartWithWindows -ne $false) { throw 'Settings preservation failed' }
           if (!(Test-Path (Join-Path $configDir 'settings.json.before-install.bak'))) { throw 'Configuration backup missing' }
@@ -58,7 +62,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = 'v0.1.0.3'
+          $tag = 'v0.1.0.4'
           Copy-Item dist/MeetingBar-Windows-portable.zip "dist/MeetingBar-Windows-$tag-portable.zip"
           $assets = @("dist/MeetingBar-Windows-$tag-Setup.exe", "dist/MeetingBar-Windows-$tag-portable.zip")
           $checksums = foreach ($asset in $assets) {
@@ -70,6 +74,6 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag @assets --clobber --repo $env:GITHUB_REPOSITORY
           } else {
-            gh release create $tag @assets --target $env:GITHUB_SHA --title 'MeetingBar Windows v0.1.0.3 - optimizado con instalador' --notes-file Installer/RELEASE_NOTES.md --latest --repo $env:GITHUB_REPOSITORY
+            gh release create $tag @assets --target $env:GITHUB_SHA --title 'MeetingBar Windows v0.1.0.4 - agenda compacta y estabilidad' --notes-file Installer/RELEASE_NOTES.md --latest --repo $env:GITHUB_REPOSITORY
           }
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

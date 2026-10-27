@@ -1,4 +1,4 @@
-#define AppVersion "0.1.0.3"
+#define AppVersion "0.1.0.4"
 [Setup]
 AppId={{304A805D-44D8-4121-A0CC-F323343BE269}
 AppName=MeetingBar

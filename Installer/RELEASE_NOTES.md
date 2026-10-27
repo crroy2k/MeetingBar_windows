@@ -2,13 +2,23 @@ Versión optimizada con instalador para Windows de 64 bits.
 
 ## Descargar e instalar
 
-Descargá **MeetingBar-Windows-v0.1.0.3-Setup.exe** y ejecutalo. Instala MeetingBar para tu usuario, incluye las dependencias de la ventana de ajustes, crea un acceso en Inicio y permite desinstalar desde Windows. No requiere permisos de administrador.
+Descargá **MeetingBar-Windows-v0.1.0.4-Setup.exe** y ejecutalo. Instala MeetingBar para tu usuario, incluye las dependencias de la ventana de ajustes, crea un acceso en Inicio y permite desinstalar desde Windows. No requiere permisos de administrador.
 
 Cerrá MeetingBar y su ventana de ajustes antes de actualizar. Se conserva la configuración existente y se desactiva Auto-join durante la instalación. La configuración anterior se respalda en `%APPDATA%\MeetingBar\settings.json.before-install.bak`. El inicio automático se habilita en instalaciones nuevas y respeta la preferencia existente al actualizar.
 
 También se incluye el ZIP portable y `SHA256SUMS.txt`.
 
-## Mejoras
+## Agenda compacta
+
+- La barra prioriza citas con hora sobre feriados y recordatorios de todo el día.
+- Muestra fecha y hora claras: Hoy, Mañana o la fecha completa.
+- La agenda separa Todo el día de Citas con hora.
+- Settings → Events permite incluir o excluir los eventos de todo el día de la barra sin ocultarlos de la agenda.
+- Si no hay citas próximas, muestra ese estado y debajo el próximo evento de todo el día, si existe.
+
+- Recuperación del widget al redibujarse la barra de Windows y eliminación de recargas visuales innecesarias al aplicar ajustes.
+
+## Mejoras conservadas
 
 - Menor memoria residente: agenda bajo demanda, diseño en caché y renderizado del widget sin contexto GPU permanente.
 - Próximo evento independiente del intervalo visible de la agenda, con búsqueda hasta 90 días adelante.

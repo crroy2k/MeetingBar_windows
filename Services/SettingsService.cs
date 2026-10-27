@@ -18,6 +18,12 @@ namespace MeetingBar.Windows.Services
             Directory.CreateDirectory(folder);
             SettingsPath = Path.Combine(folder, "settings.json");
             Current = Load();
+            if (Current.CompactAgendaSettingsVersion < 1)
+            {
+                if (Current.TimeMode != TimeMode.Hidden) Current.TimeMode = TimeMode.DateAndTime;
+                Current.CompactAgendaSettingsVersion = 1;
+                Save();
+            }
             if (Current.EnsureCalendarSources()) Save();
             if (Current.WidgetSettingsVersion < 1)
             {

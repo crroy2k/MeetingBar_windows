@@ -128,3 +128,7 @@ Regression checks: run Tests/SettingsRegression with dotnet, or use build.ps1 -T
 ### Background resource usage
 
 The agenda is created on demand instead of preloaded at startup. The compact WPF overlay uses software rendering to avoid keeping a GPU context resident, caches text measurements and appearance, and checks taskbar placement once per second. The tray application continues refreshing calendars and sending reminders while the agenda is closed. Start with Windows is applied on startup as well as after saving settings. The --hide command closes the agenda surface without quitting the tray application. Memory usage depends on calendar contents, open views, drivers, and uptime; no periodic working-set trimming or forced garbage collections are used.
+
+### Compact agenda (0.1.0.4)
+
+Timed appointments have priority in the widget. Settings > Events can include all-day events as a fallback without hiding them from the expanded agenda. The agenda separates all-day reminders/holidays from timed appointments. Date-and-time display distinguishes today, tomorrow and future dates; when no appointments remain, the widget shows a separate next all-day reminder. Native shell visibility events restore the overlay without increasing polling frequency. Auto-join stays disabled by default.

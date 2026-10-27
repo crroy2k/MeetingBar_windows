@@ -52,15 +52,26 @@ namespace MeetingBar.Windows.Services
 
         public static CalendarEvent NextWidgetEvent(IEnumerable<CalendarEvent> events, AppSettings settings, DateTime now)
         {
-            var candidates = settings?.ShowAllDayEvents == false
-                ? (events ?? Enumerable.Empty<CalendarEvent>()).Where(item => !item.IsAllDay)
-                : events;
+            var candidates = (events ?? Enumerable.Empty<CalendarEvent>())
+                .Where(item => !item.IsAllDay || settings?.IncludeAllDayEventsInWidget == true && settings.ShowAllDayEvents)
+                .OrderBy(item => item.IsAllDay).ThenBy(item => item.Start).ThenBy(item => item.End);
             var next = NextTaskbarEvent(candidates, settings?.IgnoreFreeEventsInTaskbar == true, now);
             if (next == null || settings == null || settings.EndOfDayWidgetBehavior == EndOfDayWidgetBehavior.NextEvent) return next;
             return next.Start.Date == now.Date || next.Start <= now ? next : null;
         }
 
         public static bool CanDismiss(CalendarEvent item, DateTime now) => item != null && !item.IsDismissed && item.End > now;
+        public static string WidgetWhen(CalendarEvent item, DateTime now, bool use24HourClock)
+        {
+            if (item == null) return "";
+            var day = item.Start.Date <= now.Date && item.End > now ? "Hoy" : item.Start.Date == now.Date.AddDays(1) ? "Mañana" : item.Start.ToString(item.Start.Year == now.Year ? "d MMM" : "d MMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("es-CR"));
+            if (item.IsAllDay) return day + " · todo el día";
+            if (item.Start <= now && item.End > now) return "Ahora · hasta " + CalendarEvent.FormatTime(item.End, use24HourClock);
+            return day + ", " + CalendarEvent.FormatTime(item.Start, use24HourClock);
+        }
+
+        public static IReadOnlyList<CalendarEvent> GroupAgenda(IEnumerable<CalendarEvent> events) =>
+            (events ?? Enumerable.Empty<CalendarEvent>()).OrderBy(item => item.Start.Date).ThenByDescending(item => item.IsAllDay).ThenBy(item => item.Start).ThenBy(item => item.End).ToList();
         public static bool ShouldRestoreDismissal(CalendarEvent item, DateTime now) => item != null && item.IsDismissed && item.End <= now;
     }
 }
