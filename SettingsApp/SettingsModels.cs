@@ -48,6 +48,7 @@ public sealed class Bookmark
 public sealed class AppSettings
 {
     public WidgetMode WidgetMode { get; set; } = WidgetMode.NearTray;
+    public string WidgetMonitorDevice { get; set; } = "";
     public double WidgetWidth { get; set; } = 500;
     public double WidgetOffsetX { get; set; }
     public double WidgetOffsetY { get; set; }

@@ -16,6 +16,16 @@ namespace MeetingBar.Tests
             if (args.Length > 0 && args[0] == "--render-widget") { RenderWidget(args[1]); return; }
             if (args.Length > 0 && args[0] == "--render-fallback") { RenderWidget(args[1], true); return; }
             if (args.Length > 0 && args[0] == "--render-agenda") { RenderAgenda(args[1]); return; }
+            Test("monitor selection survives disconnect and reconnect", () =>
+            {
+                var primary = new MeetingBar.Display.MonitorChoice { DeviceName = "primary", Primary = true };
+                var secondary = new MeetingBar.Display.MonitorChoice { DeviceName = "secondary", Left = -1920, Right = 0 };
+                Equal(secondary, MeetingBar.Display.MonitorCatalog.Resolve(new[] { primary, secondary }, "SECONDARY"));
+                Equal(primary, MeetingBar.Display.MonitorCatalog.Resolve(new[] { primary }, "secondary"));
+                Equal(primary, MeetingBar.Display.MonitorCatalog.Resolve(new[] { secondary, primary }, ""));
+                Equal<MeetingBar.Display.MonitorChoice>(null, MeetingBar.Display.MonitorCatalog.Resolve(new MeetingBar.Display.MonitorChoice[0], "secondary"));
+                Equal(secondary, MeetingBar.Display.MonitorCatalog.Resolve(new[] { primary, secondary }, "secondary"));
+            });
             Test("timed appointments win over earlier all-day events", () =>
             {
                 var now = new DateTime(2026, 10, 27, 8, 0, 0);

@@ -2,11 +2,17 @@ Versión optimizada con instalador para Windows de 64 bits.
 
 ## Descargar e instalar
 
-Descargá **MeetingBar-Windows-v0.1.0.4-Setup.exe** y ejecutalo. Instala MeetingBar para tu usuario, incluye las dependencias de la ventana de ajustes, crea un acceso en Inicio y permite desinstalar desde Windows. No requiere permisos de administrador.
+Descargá **MeetingBar-Windows-v0.1.0.5-Setup.exe** y ejecutalo. Instala MeetingBar para tu usuario, incluye las dependencias de la ventana de ajustes, crea un acceso en Inicio y permite desinstalar desde Windows. No requiere permisos de administrador.
 
 Cerrá MeetingBar y su ventana de ajustes antes de actualizar. Se conserva la configuración existente y se desactiva Auto-join durante la instalación. La configuración anterior se respalda en `%APPDATA%\MeetingBar\settings.json.before-install.bak`. El inicio automático se habilita en instalaciones nuevas y respeta la preferencia existente al actualizar.
 
 También se incluye el ZIP portable y `SHA256SUMS.txt`.
+
+## Selección de monitor
+
+- Settings → Widget → Monitor permite seleccionar la pantalla donde aparece el widget.
+- Recuerda la selección; si se desconecta usa la principal y vuelve al reconectarla.
+- La agenda se abre en la pantalla elegida. El ocultamiento por pantalla completa considera ese monitor.
 
 ## Agenda compacta
 

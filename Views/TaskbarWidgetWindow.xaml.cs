@@ -87,20 +87,36 @@ namespace MeetingBar.Windows.Views
         {
             ApplyAppearance(settings);
             Width = DesiredWidgetWidth(settings); Height = 40;
+            var monitor = MeetingBar.Display.MonitorCatalog.Resolve(MeetingBar.Display.MonitorCatalog.GetAll(), settings.WidgetMonitorDevice);
+            if (monitor == null) return;
             var taskbar = NativeMethods.FindWindow("Shell_TrayWnd", null);
             NativeMethods.RECT rect;
-            if (!NativeMethods.GetWindowRect(taskbar, out rect)) { Left = SystemParameters.WorkArea.Right - Width; Top = SystemParameters.WorkArea.Bottom - Height; return; }
-            var dpi = VisualTreeHelper.GetDpi(this); var sx = dpi.DpiScaleX; var sy = dpi.DpiScaleY;
-            var targetTop = rect.Top / sy + Math.Max(0, ((rect.Bottom - rect.Top) / sy - Height) / 2.0) + settings.WidgetOffsetY;
-            Top = Clamp(targetTop, SystemParameters.VirtualScreenTop, SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - Height);
-            if (settings.WidgetMode == WidgetMode.TaskbarLeft) Left = Clamp(rect.Left / sx + 8 + settings.WidgetOffsetX, SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - Width);
-            else
+            while (taskbar != IntPtr.Zero)
             {
-                var notify = NativeMethods.FindWindowEx(taskbar, IntPtr.Zero, "TrayNotifyWnd", null);
-                NativeMethods.RECT trayRect;
-                var targetLeft = NativeMethods.GetWindowRect(notify, out trayRect) ? trayRect.Left / sx - Width - 6 + settings.WidgetOffsetX : rect.Right / sx - Width - 180 + settings.WidgetOffsetX;
-                Left = Clamp(targetLeft, SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - Width);
+                if (NativeMethods.GetWindowRect(taskbar, out rect) && rect.Left >= monitor.Left && rect.Left < monitor.Right && rect.Top >= monitor.Top && rect.Top < monitor.Bottom) break;
+                taskbar = NativeMethods.FindWindowEx(IntPtr.Zero, taskbar == NativeMethods.FindWindow("Shell_TrayWnd", null) ? IntPtr.Zero : taskbar, "Shell_SecondaryTrayWnd", null);
             }
+            _taskbarHandle = taskbar;
+            var dpi = VisualTreeHelper.GetDpi(this);
+            var sx = dpi.DpiScaleX; var sy = dpi.DpiScaleY;
+            var width = Math.Min((int)Math.Ceiling(Width * sx), monitor.Right - monitor.Left);
+            var height = (int)Math.Ceiling(Height * sy);
+            int x, y;
+            if (taskbar != IntPtr.Zero && NativeMethods.GetWindowRect(taskbar, out rect))
+            {
+                // Vertical bars use the monitor's work area; horizontal bars host the widget.
+                bool horizontal = rect.Right - rect.Left > rect.Bottom - rect.Top;
+                y = horizontal ? rect.Top + Math.Max(0, (rect.Bottom - rect.Top - height) / 2) : monitor.WorkBottom - height;
+                var notify = NativeMethods.FindWindowEx(taskbar, IntPtr.Zero, "TrayNotifyWnd", null);
+                NativeMethods.RECT tray;
+                x = settings.WidgetMode == WidgetMode.TaskbarLeft ? (horizontal ? rect.Left : monitor.WorkLeft) + 8 :
+                    NativeMethods.GetWindowRect(notify, out tray) ? tray.Left - width - 6 : (horizontal ? rect.Right : monitor.WorkRight) - width - 8;
+            }
+            else { x = settings.WidgetMode == WidgetMode.TaskbarLeft ? monitor.WorkLeft + 8 : monitor.WorkRight - width - 8; y = monitor.WorkBottom - height - 8; }
+            x = (int)Clamp(x + settings.WidgetOffsetX * sx, monitor.Left, monitor.Right - width);
+            y = (int)Clamp(y + settings.WidgetOffsetY * sy, monitor.Top, Math.Max(monitor.Top, monitor.Bottom - height));
+            var handle = new WindowInteropHelper(this).Handle;
+            if (handle != IntPtr.Zero) NativeMethods.SetWindowPos(handle, NativeMethods.HwndTopmost, x, y, width, height, NativeMethods.SwpNoActivate);
             EnsureAboveTaskbar();
         }
         public void EnsureAboveTaskbar()

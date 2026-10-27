@@ -170,7 +170,10 @@ namespace MeetingBar.Windows.Services
         private void PositionPopup(Window popup)
         {
             popup.UpdateLayout();
-            var work = SystemParameters.WorkArea;
+            var monitor = MeetingBar.Display.MonitorCatalog.Resolve(MeetingBar.Display.MonitorCatalog.GetAll(), _settings.Current.WidgetMonitorDevice);
+            var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(_widget != null ? (System.Windows.Media.Visual)_widget : popup);
+            var work = monitor == null ? SystemParameters.WorkArea : new Rect(monitor.WorkLeft / dpi.DpiScaleX, monitor.WorkTop / dpi.DpiScaleY,
+                (monitor.WorkRight - monitor.WorkLeft) / dpi.DpiScaleX, (monitor.WorkBottom - monitor.WorkTop) / dpi.DpiScaleY);
             if (_widget?.IsVisible == true)
             {
                 popup.Left = Math.Max(work.Left + 8, Math.Min(work.Right - popup.Width - 8, _widget.Left + _widget.Width - popup.Width));

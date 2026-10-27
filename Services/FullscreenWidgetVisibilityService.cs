@@ -45,6 +45,8 @@ namespace MeetingBar.Windows.Services
             var monitorInfo = new NativeMethods.MONITORINFO { Size = Marshal.SizeOf(typeof(NativeMethods.MONITORINFO)) };
             if (!NativeMethods.GetMonitorInfo(monitor, ref monitorInfo)) return false;
 
+            var selected = MeetingBar.Display.MonitorCatalog.Resolve(MeetingBar.Display.MonitorCatalog.GetAll(), settings.WidgetMonitorDevice);
+            if (selected != null && (selected.Left != monitorInfo.Monitor.Left || selected.Top != monitorInfo.Monitor.Top)) return false;
             return CoversMonitor(ToRectangle(windowRect), ToRectangle(monitorInfo.Monitor));
         }
 

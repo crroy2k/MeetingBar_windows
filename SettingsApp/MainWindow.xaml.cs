@@ -23,6 +23,7 @@ public sealed partial class MainWindow : Window
     private string _page = "";
     private string _stateSignature = "";
 
+    private ComboBox? _widgetMonitor;
     private ComboBox? _widgetMode, _titleMode, _timeMode, _endOfDayBehavior, _highlightStyle, _timelineDateFormat, _mapProvider;
     private Slider? _widgetWidth;
     private NumberBox? _offsetX, _offsetY, _titleLength, _highlightBefore, _highlightAfter, _refreshMinutes, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours, _timelinePastDays, _timelineFutureDays;
@@ -206,6 +207,22 @@ public sealed partial class MainWindow : Window
         AddSection("Taskbar surface");
         _widgetMode = Choice(new[] { "Tray icon only", "Right side", "Left side" }, (int)_settings.WidgetMode);
         AddCard("Mode", "Taskbar modes use a borderless overlay because Windows has no third-party text-widget slot.", _widgetMode);
+
+        _widgetMonitor = new ComboBox { MinWidth = 310 };
+        _widgetMonitor.Items.Add(new ComboBoxItem { Content = "Monitor principal (automático)", Tag = "" });
+        _widgetMonitor.SelectedIndex = 0;
+        foreach (var monitor in MeetingBar.Display.MonitorCatalog.GetAll())
+        {
+            var item = new ComboBoxItem { Content = monitor.ToString(), Tag = monitor.DeviceName };
+            _widgetMonitor.Items.Add(item);
+            if (string.Equals(monitor.DeviceName, _settings.WidgetMonitorDevice, StringComparison.OrdinalIgnoreCase)) _widgetMonitor.SelectedItem = item;
+        }
+        if (!string.IsNullOrEmpty(_settings.WidgetMonitorDevice) && _widgetMonitor.SelectedIndex == 0)
+        {
+            var missing = new ComboBoxItem { Content = _settings.WidgetMonitorDevice + " · Desconectado (usa el principal)", Tag = _settings.WidgetMonitorDevice };
+            _widgetMonitor.Items.Add(missing); _widgetMonitor.SelectedItem = missing;
+        }
+        AddCard("Monitor", "Seleccioná dónde aparece el widget. Si desconectás esa pantalla, usa la principal y vuelve al reconectarla.", _widgetMonitor);
 
         _widgetWidth = new Slider { Minimum = 140, Maximum = 900, Value = _settings.WidgetWidth, Width = 280, StepFrequency = 10 };
         AddCard("Maximum widget width", "Short titles shrink automatically; longer titles can use this limit.", _widgetWidth);
@@ -799,6 +816,7 @@ public sealed partial class MainWindow : Window
         switch (_page)
         {
             case "Widget":
+                if (_widgetMonitor?.SelectedItem is ComboBoxItem monitorItem) _settings.WidgetMonitorDevice = monitorItem.Tag as string ?? "";
                 if (_widgetMode != null) _settings.WidgetMode = (WidgetMode)Math.Max(0, _widgetMode.SelectedIndex);
                 if (_widgetWidth != null) _settings.WidgetWidth = _widgetWidth.Value;
                 if (_offsetX != null) _settings.WidgetOffsetX = Finite(_offsetX.Value, 0);
