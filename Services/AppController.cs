@@ -51,7 +51,7 @@ namespace MeetingBar.Windows.Services
             menu.Items.Add("Quit", null, (s, e) => Application.Current.Shutdown());
             _tray.ContextMenuStrip = menu;
             _notifications = new NotificationService(_settings, _opener, _tray);
-            _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) }; _positionTimer.Tick += (s, e) => { EnsureWidgetVisible(); UpdateTrayIcon(_main.TaskbarEvent); };
+            _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) }; _positionTimer.Tick += (s, e) => { EnsureWidgetVisible(); UpdateTrayIcon(_main.TaskbarEvent); };
             _sync.Changed += (s, e) => Application.Current.Dispatcher.BeginInvoke(new Action(() => { UpdateTray(); WriteSettingsState(); WriteWinWWidgetState(); }));
             var parameters = new HwndSourceParameters("MeetingBar.MessageWindow") { Width = 0, Height = 0, WindowStyle = unchecked((int)0x80000000) };
             _messageWindow = new HwndSource(parameters); _messageWindow.AddHook(WndProc);
@@ -60,8 +60,7 @@ namespace MeetingBar.Windows.Services
         public void Start()
         {
             ApplySettings();
-            _popup = new PopupWindow(_main, OpenSettings);
-            _popup.Preload();
+            // Keep only the tray and compact widget resident until the agenda is opened.
             _sync.Start(); _notifications.Start(() => _sync.Events); _positionTimer.Start(); UpdateTray(); WriteSettingsState(); WriteWinWWidgetState(); _ = ListenForCommands();
         }
 
@@ -100,6 +99,7 @@ namespace MeetingBar.Windows.Services
                 case "create": _opener.Open(_settings.Current.CreateMeetingUrl); break;
                 case "calendar": if (_main.OpenCalendarCommand.CanExecute(null)) _main.OpenCalendarCommand.Execute(null); break;
                 case "refresh": _ = _sync.RefreshAsync(); break;
+                case "hide": _popup?.HideAnimated(); break;
                 case "settings": OpenSettings(); break;
                 case "reload": _ = ReloadSettings(); break;
                 case "connect-google": _ = ConnectGoogleFromSettings(null); break;
@@ -114,6 +114,7 @@ namespace MeetingBar.Windows.Services
 
         private void ApplySettings()
         {
+            StartupService.SetEnabled(_settings.Current.StartWithWindows);
             _main.RefreshSettings();
             EnsureWidgetVisible();
             NativeMethods.UnregisterHotKey(_messageWindow.Handle, 1);
@@ -157,7 +158,11 @@ namespace MeetingBar.Windows.Services
         }
         private void ShowPopup()
         {
-            if (_popup == null) _popup = new PopupWindow(_main, OpenSettings);
+            if (_popup == null)
+            {
+                _popup = new PopupWindow(_main, OpenSettings);
+                _popup.Preload();
+            }
             PositionPopup(_popup); _popup.ShowAnimated();
         }
 

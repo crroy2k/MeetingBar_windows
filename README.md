@@ -124,3 +124,7 @@ Licensed under the Apache License 2.0. See [`LICENSE`](LICENSE).
 - Auto-join remains off by default. No personal calendars, configuration files, or logs are included in this repository.
 
 Regression checks: run Tests/SettingsRegression with dotnet, or use build.ps1 -Test. The WPF test runner also accepts --render-widget followed by an output PNG path to verify a long title and an upcoming event outside a one-day agenda.
+
+### Background resource usage
+
+The agenda is created on demand instead of preloaded at startup. The compact WPF overlay uses software rendering to avoid keeping a GPU context resident, caches text measurements and appearance, and checks taskbar placement once per second. The tray application continues refreshing calendars and sending reminders while the agenda is closed. Start with Windows is applied on startup as well as after saving settings. The --hide command closes the agenda surface without quitting the tray application. Memory usage depends on calendar contents, open views, drivers, and uptime; no periodic working-set trimming or forced garbage collections are used.

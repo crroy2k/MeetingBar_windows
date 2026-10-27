@@ -288,6 +288,7 @@ namespace MeetingBar.Tests
 
         private static void RenderWidget(string path)
         {
+            System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
 
             var app = new MeetingBar.Windows.App(); app.InitializeComponent();
             var settings = new AppSettings { TimelineFutureDays = 1, WidgetWidth = 300, AutoJoin = false };

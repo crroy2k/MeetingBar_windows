@@ -22,10 +22,15 @@ namespace MeetingBar.Windows.Views
         private bool _isHighlighted;
         private bool _shineRunning;
         private double _shineDestination;
+        private string _layoutKey;
+        private string _appearanceKey;
+        private double _cachedWidth;
         public TaskbarWidgetWindow(MainViewModel vm, Action clicked)
         {
             InitializeComponent();
             DataContext = vm; _clicked = clicked;
+            SystemEvents.UserPreferenceChanged += ThemeChanged;
+            Closed += (s, e) => SystemEvents.UserPreferenceChanged -= ThemeChanged;
             SourceInitialized += (s, e) =>
             {
                 var handle = new WindowInteropHelper(this).Handle;
@@ -33,6 +38,7 @@ namespace MeetingBar.Windows.Views
                 EnsureAboveTaskbar();
             };
         }
+        private void ThemeChanged(object sender, UserPreferenceChangedEventArgs e) => Dispatcher.BeginInvoke(new Action(() => { _appearanceKey = null; _layoutKey = null; }));
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             if (msg == 0x001C) Dispatcher.BeginInvoke(new Action(EnsureAboveTaskbar));
@@ -72,6 +78,9 @@ namespace MeetingBar.Windows.Views
         {
             var vm = DataContext as MainViewModel;
             var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+            var key = string.Join("|", vm?.WidgetTitle, vm?.WidgetTime, settings.WidgetWidth, settings.ShowServiceIcon, pixelsPerDip);
+            if (_layoutKey == key) return _cachedWidth;
+            _layoutKey = key;
             var title = Measure(vm?.WidgetTitle, 12, FontWeights.SemiBold, "Segoe UI", pixelsPerDip);
             var time = Measure(vm?.WidgetTime, 11, FontWeights.Normal, "Segoe UI", pixelsPerDip);
             var content = 32 + (settings.ShowServiceIcon ? 16 : 0) + title + time;
@@ -80,10 +89,15 @@ namespace MeetingBar.Windows.Views
             WidgetTitle.FontSize = wraps ? 10 : 12;
             WidgetTitle.LineHeight = wraps ? 15 : 18;
             WidgetTitle.MaxHeight = wraps ? 30 : 18;
-            return Clamp(Math.Ceiling(content), 140, Math.Max(140, settings.WidgetWidth));
+            return _cachedWidth = Clamp(Math.Ceiling(content), 140, Math.Max(140, settings.WidgetWidth));
         }
         private void ApplyAppearance(AppSettings settings)
         {
+            var currentVm = DataContext as MainViewModel;
+            var highlighted = WidgetHighlightPolicy.ShouldHighlight(currentVm?.WidgetEvent, settings, DateTime.Now);
+            var key = string.Join("|", settings.UseAutomaticWidgetColor, settings.WidgetBackgroundColor, currentVm?.WidgetEventColor, settings.WidgetHighlightStyle, highlighted, Width);
+            if (_appearanceKey == key) return;
+            _appearanceKey = key;
             var background = settings.UseAutomaticWidgetColor ? AutomaticTaskbarColor() : ParseColor(settings.WidgetBackgroundColor, Color.FromRgb(32, 32, 32));
             var lightText = RelativeLuminance(background) < 0.53;
             var foreground = lightText ? Colors.White : Color.FromRgb(24, 24, 24);
@@ -99,7 +113,7 @@ namespace MeetingBar.Windows.Views
                 : settings.UseAutomaticWidgetColor
                     ? new SolidColorBrush(Color.FromArgb(30, eventColor.R, eventColor.G, eventColor.B))
                     : new SolidColorBrush(Color.FromArgb(225, Mix(background, eventColor, 0.16).R, Mix(background, eventColor, 0.16).G, Mix(background, eventColor, 0.16).B));
-            _isHighlighted = WidgetHighlightPolicy.ShouldHighlight(vm?.WidgetEvent, settings, DateTime.Now);
+            _isHighlighted = highlighted;
             if (_isHighlighted && settings.WidgetHighlightStyle == WidgetHighlightStyle.Shine) StartShine(foreground); else StopShine();
             UpdateSurfaceBackground();
             WidgetSurface.BorderBrush = Brushes.Transparent;

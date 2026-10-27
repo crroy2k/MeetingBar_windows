@@ -19,6 +19,8 @@ namespace MeetingBar.Windows
             bool created;
             _singleInstance = new Mutex(true, "Local\\MeetingBar.Windows", out created);
             if (!created) { SendCommand(e.Args.Length == 0 ? "popup" : e.Args[0].TrimStart('-')); Shutdown(); return; }
+            // This small, mostly static overlay does not need a resident GPU rendering context.
+            RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
             base.OnStartup(e);
             ApplyWindowsAccent();
             AppDomain.CurrentDomain.UnhandledException += (s, args) => AppLog.Error("Unhandled", args.ExceptionObject as Exception ?? new Exception("Unknown fatal error"));
