@@ -75,6 +75,11 @@ namespace MeetingBar.Windows.Views
             var title = Measure(vm?.WidgetTitle, 12, FontWeights.SemiBold, "Segoe UI", pixelsPerDip);
             var time = Measure(vm?.WidgetTime, 11, FontWeights.Normal, "Segoe UI", pixelsPerDip);
             var content = 32 + (settings.ShowServiceIcon ? 16 : 0) + title + time;
+            var available = Math.Max(40, settings.WidgetWidth - 32 - (settings.ShowServiceIcon ? 16 : 0) - time);
+            var wraps = title > available;
+            WidgetTitle.FontSize = wraps ? 10 : 12;
+            WidgetTitle.LineHeight = wraps ? 15 : 18;
+            WidgetTitle.MaxHeight = wraps ? 30 : 18;
             return Clamp(Math.Ceiling(content), 140, Math.Max(140, settings.WidgetWidth));
         }
         private void ApplyAppearance(AppSettings settings)

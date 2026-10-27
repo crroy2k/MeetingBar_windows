@@ -114,8 +114,8 @@ namespace MeetingBar.Windows.Services
                 try { var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase); if (match.Success) return Result(Clean(match.Value), "Other"); }
                 catch (ArgumentException) { }
             }
-            var generic = AnyUrl.Match(text);
-            return generic.Success ? Result(Clean(generic.Value), "Web meeting") : null;
+            // Informational links in notes must not become automatic join targets.
+            return null;
         }
 
         private static MeetingLinkResult Result(string url, string service) => new MeetingLinkResult { Url = url, Service = service };

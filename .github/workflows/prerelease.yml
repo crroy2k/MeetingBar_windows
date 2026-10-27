@@ -62,7 +62,7 @@ jobs:
           $dist = Join-Path $PWD 'dist'
           $zip = Join-Path $dist 'MeetingBar-Windows-portable.zip'
           $exe = Join-Path $dist 'MeetingBar-Windows-portable.exe'
-          Copy-Item '.\bin\Release\MeetingBar.exe' $exe -Force
+          Copy-Item '.\bin\Release\net472\MeetingBar.exe' $exe -Force
 
           $hashLines = foreach ($asset in @($zip, $exe)) {
             $hash = (Get-FileHash $asset -Algorithm SHA256).Hash.ToLowerInvariant()

@@ -12,6 +12,7 @@ namespace MeetingBar.Windows.Services
         public void Open(string url)
         {
             if (string.IsNullOrWhiteSpace(url)) return;
+            if (!IsAllowedUrl(url)) throw new InvalidOperationException("Unsupported or unsafe link type.");
             var s = _settings.Current;
             if (!string.IsNullOrWhiteSpace(s.PreferredBrowserPath))
             {
@@ -22,6 +23,12 @@ namespace MeetingBar.Windows.Services
         }
 
         public void Open(CalendarEvent item) => Open(item?.MeetingUrl);
+        internal static bool IsAllowedUrl(string value)
+        {
+            Uri uri;
+            if (!Uri.TryCreate(value, UriKind.Absolute, out uri)) return false;
+            return uri.Scheme == "https" || uri.Scheme == "http" || uri.Scheme == "zoommtg" || uri.Scheme == "discord" || uri.Scheme == "outlookcal";
+        }
         private static string Quote(string value) => "\"" + value.Replace("\"", "\\\"") + "\"";
     }
 }

@@ -10,8 +10,24 @@ namespace MeetingBar.Tests
     internal static class Program
     {
         private static int _failed;
-        private static void Main()
+        [STAThread]
+        private static void Main(string[] args)
         {
+            if (args.Length > 0 && args[0] == "--render-widget") { RenderWidget(args[1]); return; }
+            Test("informational links are not join targets", () =>
+            {
+                Equal<MeetingLinkResult>(null, MeetingLinkDetector.DetectText("Privacy https://example.com/privacy"));
+                Equal(false, MeetingOpener.IsAllowedUrl("file:///C:/Windows/System32/cmd.exe"));
+                Equal(false, MeetingOpener.IsAllowedUrl("javascript:alert(1)"));
+                Equal(true, MeetingOpener.IsAllowedUrl("https://teams.microsoft.com/l/meetup-join/example"));
+            });
+            Test("recurring Outlook occurrences have distinct identities", () =>
+            {
+                var first = OutlookCalendarProvider.OccurrenceId("series", new DateTime(2026, 10, 27, 9, 0, 0));
+                var next = OutlookCalendarProvider.OccurrenceId("series", new DateTime(2026, 10, 28, 9, 0, 0));
+                Equal(false, first == next);
+                Equal(first, OutlookCalendarProvider.OccurrenceId("series", new DateTime(2026, 10, 27, 9, 0, 0)));
+            });
             Test("detects Teams links", () =>
             {
                 var found = MeetingLinkDetector.DetectText("Join https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc%40thread.v2/0?context=x");
@@ -268,6 +284,34 @@ namespace MeetingBar.Tests
             });
             Console.WriteLine(_failed == 0 ? "All MeetingBar tests passed." : _failed + " test(s) failed.");
             Environment.ExitCode = _failed == 0 ? 0 : 1;
+        }
+
+        private static void RenderWidget(string path)
+        {
+
+            var app = new MeetingBar.Windows.App(); app.InitializeComponent();
+            var settings = new AppSettings { TimelineFutureDays = 1, WidgetWidth = 300, AutoJoin = false };
+            var service = (SettingsService)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(SettingsService));
+            typeof(SettingsService).GetField("<Current>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(service, settings);
+            var sync = new CalendarSyncService(service);
+            var title = "Project review | Progress, open questions and upcoming deliverables for the team";
+            sync.InjectDebugEvent(new CalendarEvent { Id = "layout-test", CalendarId = "meetingbar-debug", Title = title, Start = DateTime.Now.AddDays(16), End = DateTime.Now.AddDays(16).AddHours(1) });
+            Equal(0, sync.Events.Count);
+            Equal(1, sync.UpcomingEvents.Count);
+            var vm = new MeetingBar.Windows.ViewModels.MainViewModel(sync, service, new MeetingOpener(service));
+            Equal(title, vm.WidgetTitle);
+            var window = new TaskbarWidgetWindow(vm, () => { }); window.ShowActivated = false; window.Show(); window.ApplyPosition(settings);
+            window.Measure(new System.Windows.Size(window.Width, window.Height));
+            window.Arrange(new System.Windows.Rect(0, 0, window.Width, window.Height)); window.UpdateLayout();
+            var text = (System.Windows.Controls.TextBlock)window.FindName("WidgetTitle");
+            Equal(10.0, text.FontSize);
+            if (text.ActualHeight <= 15 || text.ActualHeight > 30.1) throw new Exception("Expected two visible title lines; height=" + text.ActualHeight);
+            var image = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.Width, (int)window.Height, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            image.Render(window);
+            var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(image));
+            using (var output = System.IO.File.Create(path)) encoder.Save(output);
+            vm.Dispose(); sync.Dispose(); window.Close();
+            Console.WriteLine("PASS next event survives a one-day agenda; long title renders as two lines at 10pt");
         }
 
         private static void Test(string name, Action action) { try { action(); Console.WriteLine("PASS " + name); } catch (Exception ex) { _failed++; Console.WriteLine("FAIL " + name + ": " + ex.Message); } }

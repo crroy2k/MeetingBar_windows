@@ -23,8 +23,8 @@ namespace MeetingBar.Windows.ViewModels
         public ObservableCollection<CalendarEvent> PageEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<CalendarEvent> TimelineEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<Bookmark> Bookmarks { get; } = new ObservableCollection<Bookmark>();
-        public CalendarEvent TaskbarEvent => EventWindowPolicy.NextTaskbarEvent(Events, _settings.Current.IgnoreFreeEventsInTaskbar, DateTime.Now);
-        public CalendarEvent WidgetEvent => EventWindowPolicy.NextWidgetEvent(Events, _settings.Current, DateTime.Now);
+        public CalendarEvent TaskbarEvent => EventWindowPolicy.NextTaskbarEvent(_sync.UpcomingEvents, _settings.Current.IgnoreFreeEventsInTaskbar, DateTime.Now);
+        public CalendarEvent WidgetEvent => EventWindowPolicy.NextWidgetEvent(_sync.UpcomingEvents, _settings.Current, DateTime.Now);
         public CalendarEvent NextEvent => WidgetEvent;
         public bool ShouldShowTaskbarWidget => _settings.Current.EndOfDayWidgetBehavior != EndOfDayWidgetBehavior.Hide || WidgetEvent != null;
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
@@ -61,7 +61,7 @@ namespace MeetingBar.Windows.ViewModels
                 if (mode == TitleMode.Hidden) return "";
                 if (mode == TitleMode.Dot) return "•";
                 if (mode == TitleMode.Generic) return "Meeting";
-                return TruncateWidgetTitle(WidgetEvent.Title ?? "Untitled event");
+                return WidgetEvent.Title ?? "Untitled event";
             }
         }
         public string WidgetTime => WidgetEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : WidgetEvent.IsCurrent && _settings.Current.ShowOngoingTimeRemaining ? WidgetEvent.Remaining : _settings.Current.TimeMode == TimeMode.StartTime ? CalendarEvent.FormatTime(WidgetEvent.Start, _settings.Current.Use24HourClock) : WidgetEvent.Countdown;

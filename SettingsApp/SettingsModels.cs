@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace MeetingBar.SettingsApp;
 
@@ -179,6 +180,7 @@ public sealed class DebugRequest
 
 public static class SettingsStore
 {
+    private static string? _baseline;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -199,6 +201,7 @@ public static class SettingsStore
                 : JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath, Encoding.UTF8), JsonOptions) ?? new AppSettings();
             settings.EnsureCalendarSources();
             settings.FullscreenAppBlacklist ??= [];
+            _baseline = JsonSerializer.Serialize(settings, JsonOptions);
             return settings;
         }
         catch (Exception error)
@@ -222,8 +225,24 @@ public static class SettingsStore
     {
         Directory.CreateDirectory(FolderPath);
         var temporary = SettingsPath + ".winui.tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(settings, JsonOptions), new UTF8Encoding(false));
+        var edited = JsonSerializer.Serialize(settings, JsonOptions);
+        var current = File.Exists(SettingsPath) ? File.ReadAllText(SettingsPath, Encoding.UTF8) : "{}";
+        var merged = MergeChanges(_baseline ?? "{}", edited, current);
+        File.WriteAllText(temporary, merged, new UTF8Encoding(false));
         File.Move(temporary, SettingsPath, true);
+        _baseline = edited;
+    }
+
+    // Keep values changed by the running app or another settings window.
+    internal static string MergeChanges(string baseline, string edited, string current)
+    {
+        var before = JsonNode.Parse(baseline)!.AsObject();
+        var changes = JsonNode.Parse(edited)!.AsObject();
+        var result = JsonNode.Parse(current)!.AsObject();
+        foreach (var property in changes)
+            if (!JsonNode.DeepEquals(before[property.Key], property.Value))
+                result[property.Key] = property.Value?.DeepClone();
+        return result.ToJsonString(JsonOptions);
     }
 
     public static void SaveDebugRequest(DebugRequest request)

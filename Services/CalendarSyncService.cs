@@ -21,6 +21,7 @@ namespace MeetingBar.Windows.Services
 
         public IReadOnlyList<CalendarEvent> Events { get; private set; } = new List<CalendarEvent>();
         public IReadOnlyList<CalendarEvent> TimelineEvents { get; private set; } = new List<CalendarEvent>();
+        public IReadOnlyList<CalendarEvent> UpcomingEvents { get; private set; } = new List<CalendarEvent>();
         public IReadOnlyList<CalendarInfo> Calendars { get; private set; } = new List<CalendarInfo>();
         public ProviderStatus Status { get; private set; } = new ProviderStatus { Provider = "Calendar", Message = "Starting…" };
         public event EventHandler Changed;
@@ -41,7 +42,7 @@ namespace MeetingBar.Windows.Services
                 var now = DateTime.Now;
                 var fetchRange = TimelineDayRange(_settings.Current, now);
                 var from = fetchRange.Item1;
-                var to = fetchRange.Item2;
+                var to = now.Date.AddDays(91);
                 var sources = _settings.Current.CalendarSources.Where(x => x != null && x.Enabled).ToList();
                 var activeIds = new HashSet<string>(sources.Select(x => x.Id), StringComparer.OrdinalIgnoreCase);
                 foreach (var staleId in _lastGoodBySource.Keys.Where(x => !activeIds.Contains(x)).ToList()) _lastGoodBySource.Remove(staleId);
@@ -73,7 +74,7 @@ namespace MeetingBar.Windows.Services
                     IsHealthy = errors.Count == 0,
                     Message = sources.Count == 0 ? "No calendar sources configured" : errors.Count == 0 ? "Updated " + DateTime.Now.ToString("t") : string.Join(" | ", errors)
                 };
-                AppLog.Info("Calendar refresh completed: sources=" + sources.Count + ", errors=" + errors.Count + ", calendars=" + Calendars.Count + ", visibleEvents=" + Events.Count);
+                AppLog.Info("Calendar refresh completed: sources=" + sources.Count + ", errors=" + errors.Count + ", calendars=" + Calendars.Count + ", visibleEvents=" + Events.Count + ", upcomingEvents=" + UpcomingEvents.Count);
             }
             catch (Exception ex)
             {
@@ -129,6 +130,7 @@ namespace MeetingBar.Windows.Services
             var dayStart = dayRange.Item1;
             var dayEnd = dayRange.Item2;
             var all = FilterGeneral(_lastGoodEvents.Concat(_debugEvents)).ToList();
+            UpcomingEvents = all.Where(item => item.End > now).ToList();
             TimelineEvents = all.Where(item => item.End > dayStart && item.Start < dayEnd).ToList();
             var listRange = s.ShowFullDayEventList ? Tuple.Create(dayStart, dayEnd) : EventWindowPolicy.Range(s, now);
             Events = all.Where(item => item.End > listRange.Item1 && item.Start < listRange.Item2).ToList();

@@ -37,7 +37,7 @@ namespace MeetingBar.Windows.Services
                         root = Invoke(store, "GetRootFolder");
                         ReadFolderTree(root, from, to, calendars, events);
                     }
-                    catch { }
+                    catch (Exception error) { throw new InvalidOperationException("Could not read an Outlook calendar store. Keeping previous events.", error); }
                     finally { Release(root); Release(store); }
                 }
             }
@@ -54,12 +54,12 @@ namespace MeetingBar.Windows.Services
             try
             {
                 folders = Get(folder, "Folders");
-                var count = SafeInt(() => Get(folders, "Count"), 0);
+                var count = Convert.ToInt32(Get(folders, "Count"), CultureInfo.InvariantCulture);
                 for (var i = 1; i <= count; i++)
                 {
                     object child = null;
                     try { child = GetIndexed(folders, i); ReadFolderTree(child, from, to, calendars, output); }
-                    catch { }
+                    catch (Exception error) { throw new InvalidOperationException("Could not read an Outlook calendar folder. Keeping previous events.", error); }
                     finally { Release(child); }
                 }
             }
@@ -76,19 +76,21 @@ namespace MeetingBar.Windows.Services
             try
             {
                 items = Get(folder, "Items");
-                Set(items, "IncludeRecurrences", true);
                 Invoke(items, "Sort", "[Start]");
+                Set(items, "IncludeRecurrences", true);
                 var filter = "[Start] < '" + to.ToString("g", CultureInfo.CurrentCulture) + "' AND [End] > '" + from.ToString("g", CultureInfo.CurrentCulture) + "'";
                 restricted = Invoke(items, "Restrict", filter);
-                var count = Math.Min(SafeInt(() => Get(restricted, "Count"), 0), 5000);
-                for (var i = 1; i <= count; i++)
+                // Count is undefined for some recurring Outlook collections.
+                for (var i = 1; i <= 5001; i++)
                 {
                     object item = null;
                     try
                     {
-                        item = GetIndexed(restricted, i);
-                        var start = SafeDate(() => Get(item, "Start"));
-                        var end = SafeDate(() => Get(item, "End"));
+                        item = Invoke(restricted, i == 1 ? "GetFirst" : "GetNext");
+                        if (item == null) break;
+                        if (i > 5000) throw new InvalidOperationException("Outlook result limit reached; narrow the calendar selection.");
+                        var start = Convert.ToDateTime(Get(item, "Start"), CultureInfo.InvariantCulture);
+                        var end = Convert.ToDateTime(Get(item, "End"), CultureInfo.InvariantCulture);
                         if (start == DateTime.MinValue || end <= from || start >= to) continue;
                         var response = SafeInt(() => Get(item, "ResponseStatus"), 0);
                         var busy = SafeInt(() => Get(item, "BusyStatus"), 2);
@@ -97,7 +99,7 @@ namespace MeetingBar.Windows.Services
                         var itemUrl = TryGetOnlineMeetingUrl(item);
                         output.Add(new CalendarEvent
                         {
-                            Id = SafeString(() => Get(item, "GlobalAppointmentID")) ?? SafeString(() => Get(item, "EntryID")) ?? Guid.NewGuid().ToString("N"),
+                            Id = OccurrenceId(SafeString(() => Get(item, "GlobalAppointmentID")) ?? SafeString(() => Get(item, "EntryID")) ?? Guid.NewGuid().ToString("N"), start),
                             Title = SafeString(() => Get(item, "Subject")) ?? "Untitled event", Notes = body, Location = location,
                             ConferenceUrl = itemUrl, CalendarId = id, CalendarName = name, CalendarColor = color,
                             Organizer = SafeString(() => Get(item, "Organizer")), Start = start, End = end,
@@ -106,12 +108,14 @@ namespace MeetingBar.Windows.Services
                             IsBusy = busy != 0
                         });
                     }
-                    catch { }
+                    catch (Exception error) { throw new InvalidOperationException("Could not read an Outlook appointment. Keeping previous events.", error); }
                     finally { Release(item); }
                 }
             }
             finally { Release(restricted); Release(items); }
         }
+
+        internal static string OccurrenceId(string seriesId, DateTime start) => seriesId + ":" + start.ToString("yyyyMMddTHHmmss", CultureInfo.InvariantCulture);
 
         private static string TryGetOnlineMeetingUrl(object item)
         {

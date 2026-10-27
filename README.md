@@ -52,7 +52,7 @@ The taskbar versions are borderless topmost overlays. Windows 11 has no supporte
 ## Features
 
 - Current/next meeting, event-aware tray icon and upcoming-event dot, configurable ongoing time remaining, independently configurable past/future hour windows and day boundaries shared by the event list and timeline, dimmed past events, muted-but-visible dismissed events, hover detail flyouts, countdowns, event colors, transparent full-color emoji titles, meeting-provider join icons, and Open calendar action
-- Google Meet, Zoom, Teams, Webex, Jitsi, Slack Huddles, and the full MeetingBar provider catalogue; arbitrary links remain joinable
+- Google Meet, Zoom, Teams, Webex, Jitsi, Slack Huddles, and the full MeetingBar provider catalogue; informational URLs are not treated as meeting links
 - Meeting-link precedence, HTML cleanup, custom regex model, and nested Outlook SafeLink decoding
 - Event filters: all-day, declined, tentative, free/non-busy, linkless, calendar selection
 - Preferred browser, create-meeting URL, recurring meeting bookmarks
@@ -87,7 +87,7 @@ For Raycast for Windows, import the ready-made commands from the packaged `rayca
 
 ## Build and test
 
-Visual Studio 2022 or Build Tools with the .NET Framework 4.7.2 targeting pack, plus the .NET 8 SDK, is required. The build restores stable Microsoft Windows App SDK 2.2 for the WinUI settings host and native widget provider.
+The .NET SDK (8 or later) on Windows is required. The SDK-style WPF build restores the .NET Framework 4.7.2 reference assemblies from NuGet; Visual Studio Build Tools are not required. The WinUI settings host and widget provider use the Windows App SDK version pinned in their project files.
 
 ```powershell
 .\build.ps1 -Configuration Release -Test -Package
@@ -113,3 +113,14 @@ If Google reports missing Calendar permission, open **Settings → Calendars**, 
 ## License
 
 Licensed under the Apache License 2.0. See [`LICENSE`](LICENSE).
+
+## Fork improvements
+
+- Current/next events are fetched up to 90 days ahead, independently of the visible agenda range.
+- Long taskbar titles wrap to two lines with smaller text; hovering shows the full title.
+- Settings saves preserve unrelated values changed externally while the settings window is open.
+- Outlook recurring appointments have separate occurrence identities, and read failures preserve previous events with an error status.
+- Only recognized meeting links or explicit custom patterns become join targets. Unsupported URI schemes are rejected.
+- Auto-join remains off by default. No personal calendars, configuration files, or logs are included in this repository.
+
+Regression checks: run Tests/SettingsRegression with dotnet, or use build.ps1 -Test. The WPF test runner also accepts --render-widget followed by an output PNG path to verify a long title and an upcoming event outside a one-day agenda.

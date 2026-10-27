@@ -1,0 +1,11 @@
+using MeetingBar.SettingsApp;
+using System.Text.Json.Nodes;
+var baseline = "{\"TimelineFutureDays\":1,\"AutoJoin\":false,\"WidgetWidth\":500}";
+var edited = "{\"TimelineFutureDays\":1,\"AutoJoin\":false,\"WidgetWidth\":380}";
+var current = "{\"TimelineFutureDays\":30,\"AutoJoin\":false,\"WidgetWidth\":500,\"ExternalProperty\":true}";
+var merged = JsonNode.Parse(SettingsStore.MergeChanges(baseline, edited, current))!;
+if ((int)merged["TimelineFutureDays"]! != 30 || (int)merged["WidgetWidth"]! != 380 || (bool)merged["AutoJoin"]! || !(bool)merged["ExternalProperty"]!) throw new Exception("Stale settings regression");
+Console.WriteLine("PASS stale settings preserve external changes, user edits and AutoJoin=false");
+var explicitChange = JsonNode.Parse(SettingsStore.MergeChanges(baseline, "{\"TimelineFutureDays\":7,\"AutoJoin\":false,\"WidgetWidth\":500}", current))!;
+if ((int)explicitChange["TimelineFutureDays"]! != 7) throw new Exception("Explicit setting ignored");
+Console.WriteLine("PASS explicit user edits override the old value");
