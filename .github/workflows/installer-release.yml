@@ -8,6 +8,7 @@ on:
       - 'Properties/AssemblyInfo.cs'
       - 'Installer/MeetingBar.iss'
       - 'Installer/RELEASE_NOTES.md'
+      - '.github/workflows/installer-release.yml'
 
 permissions:
   contents: write
