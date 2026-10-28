@@ -1,4 +1,21 @@
-# Versión 0.1.0.6 — Outlook clásico y español
+# Versión 0.1.0.7 — Actualizaciones bajo demanda
+
+- Nuevo botón «Actualizar…» en Configuración → General.
+- Consulta la versión marcada como Latest en este repositorio únicamente al pulsar el botón. No hay búsquedas ni descargas automáticas.
+- Compara las versiones numéricamente, muestra las novedades y permite descargar e instalar una versión posterior.
+- Verifica origen, tamaño, SHA-256 y versión del instalador antes de ejecutarlo; rechaza versiones anteriores y descargas incompletas.
+- Conserva los calendarios y la configuración, y vuelve a abrir MeetingBar después de actualizar.
+- La agenda y la ventana de configuración muestran la versión instalada en pequeño.
+
+## Instalación
+
+Descarga **MeetingBar-Windows-v0.1.0.7-Setup.exe** y ejecútalo. La versión 0.1.0.6 necesita esta primera instalación para incorporar el actualizador. A partir de la 0.1.0.7, usa Configuración → General → Actualizar…
+
+El manifiesto `update.json` se publica junto al instalador en cada versión. El SHA-256 verifica la integridad respecto a los metadatos de GitHub; no sustituye una firma digital independiente. La distribución sigue sin firma Authenticode.
+
+## Cambios anteriores
+
+### Versión 0.1.0.6 — Outlook clásico y español
 
 - «Abrir calendario» usa Outlook clásico directamente y abre el calendario de la fuente del evento.
 - Traducción al español de la agenda, los detalles, los recordatorios, los ajustes y el instalador.

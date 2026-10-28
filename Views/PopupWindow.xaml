@@ -6,7 +6,8 @@
         AllowsTransparency="False" Background="Transparent" Deactivated="Window_Deactivated">
   <Border x:Name="PopupSurface" Background="#44202020" BorderBrush="#66767676" BorderThickness="1" CornerRadius="8" Padding="18" SnapsToDevicePixels="True">
     <Grid>
-      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <TextBlock Grid.Row="4" Text="{Binding VersionLabel}" FontSize="9" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" Margin="0,7,0,0"/>
 
       <Border Grid.Row="0" Background="#66202020" CornerRadius="9" Padding="10,8,10,7" Margin="0,0,0,12">
         <views:DayTimelineControl x:Name="TimelineControl" Events="{Binding TimelineEvents}" PastHours="{Binding TimelinePastHours}" FutureHours="{Binding TimelineFutureHours}" IncludePastDay="{Binding TimelineIncludesPastDay}" IncludeNextDay="{Binding TimelineIncludesNextDay}" PastDays="{Binding TimelinePastDays}" FutureDays="{Binding TimelineFutureDays}" Use24HourClock="{Binding Use24HourClock}" ShowTimelineDate="{Binding ShowTimelineDate}" TimelineDateFormat="{Binding TimelineDateFormat}" SelectedDayChanged="Timeline_SelectedDayChanged" Height="76" AutomationProperties.Name="Línea de tiempo de eventos" AutomationProperties.HelpText="Desplázate para consultar otras horas. Haz clic para volver a hoy."/>
@@ -82,7 +83,7 @@
         </StackPanel>
       </Grid>
 
-      <Border Grid.Row="0" Grid.RowSpan="4" Panel.ZIndex="20" Visibility="{Binding LoadingVisibility}" Background="#B8202020" CornerRadius="10">
+      <Border Grid.Row="0" Grid.RowSpan="5" Panel.ZIndex="20" Visibility="{Binding LoadingVisibility}" Background="#B8202020" CornerRadius="10">
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
           <Grid Width="120" Height="3" ClipToBounds="True" Background="#446E6E6E">
             <Border Width="40" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" CornerRadius="2">

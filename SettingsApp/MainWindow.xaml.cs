@@ -57,6 +57,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        VersionLabel.Text = "v" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
         ConfigureWindow();
         ShowPage("Widget");
         Navigation.Loaded += (_, _) => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
@@ -472,6 +473,14 @@ public sealed partial class MainWindow : Window
         AddSection("Inicio");
         _startWithWindows = Toggle(_settings.StartWithWindows);
         AddCard("Iniciar MeetingBar con Windows", "Muestra MeetingBar en la bandeja y la barra de tareas al iniciar sesión.", _startWithWindows);
+        AddSection("Actualizaciones");
+        var checkUpdates = new Button { Content = "Actualizar…" };
+        checkUpdates.Click += async (_, _) =>
+        {
+            try { await SettingsStore.SendCommandAsync("check-updates"); }
+            catch { SaveStatus.Severity = InfoBarSeverity.Error; SaveStatus.Message = "No se pudo contactar con MeetingBar. Comprueba que la aplicación esté abierta."; SaveStatus.IsOpen = true; }
+        };
+        AddCard("Actualizar MeetingBar", "Versión instalada: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + ". Comprueba GitHub (Latest) solo al pulsar este botón.", checkUpdates);
         AddSection("Privacidad");
         AddCard("Datos del calendario en este equipo", "Los tokens de Google se cifran para el usuario de Windows que ha iniciado sesión.");
         AddCard("Diagnóstico", "Los registros de diagnóstico se guardan en este equipo y no incluyen los títulos ni los enlaces de las reuniones.");

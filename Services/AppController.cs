@@ -36,6 +36,8 @@ namespace MeetingBar.Windows.Services
         private TaskbarWidgetWindow _widget;
         private readonly CancellationTokenSource _ipcCancellation = new CancellationTokenSource();
         private readonly object _settingsStateGate = new object();
+        private readonly UpdateService _updates = new UpdateService();
+        private UpdateWindow _updateWindow;
 
         public AppController()
         {
@@ -101,6 +103,7 @@ namespace MeetingBar.Windows.Services
                 case "refresh": _ = _sync.RefreshAsync(); break;
                 case "hide": _popup?.HideAnimated(); break;
                 case "settings": OpenSettings(); break;
+                case "check-updates": ShowUpdates(); break;
                 case "reload": _ = ReloadSettings(); break;
                 case "connect-google": _ = ConnectGoogleFromSettings(null); break;
                 case "debug-inject": InjectDebugEvent(); break;
@@ -121,6 +124,16 @@ namespace MeetingBar.Windows.Services
             if (_settings.Current.GlobalJoinHotkey) NativeMethods.RegisterHotKey(_messageWindow.Handle, 1, NativeMethods.ModControl | NativeMethods.ModAlt, (uint)Forms.Keys.J);
             _sync.Schedule(); UpdateTray();
         }
+
+        private void ShowUpdates()
+        {
+            if (_updateWindow != null) { _updateWindow.Activate(); return; }
+            _popup?.HideAnimated();
+            _updateWindow = new UpdateWindow(_updates);
+            _updateWindow.Closed += (s, e) => _updateWindow = null;
+            _updateWindow.Show();
+        }
+
 
         private void CreateWidget()
         {
@@ -392,6 +405,7 @@ namespace MeetingBar.Windows.Services
 
         public void Dispose()
         {
+            _updates.Dispose();
             _ipcCancellation.Cancel(); _positionTimer.Stop(); NativeMethods.UnregisterHotKey(_messageWindow.Handle, 1); _messageWindow.Dispose(); _notifications.Dispose(); _main.Dispose(); _sync.Dispose(); _tray.Visible = false; _tray.Dispose(); _trayIcon.Dispose(); _ipcCancellation.Dispose();
         }
     }

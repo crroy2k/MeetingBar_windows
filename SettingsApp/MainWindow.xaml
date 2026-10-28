@@ -50,9 +50,10 @@
     </NavigationView>
 
     <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorDefaultBrush}">
-      <Grid Margin="300,0,38,0">
+      <Grid Margin="24,0,38,0">
         <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-        <InfoBar x:Name="SaveStatus" IsOpen="False" IsClosable="False" Severity="Success" Message="Configuración guardada y aplicada" VerticalAlignment="Center" Margin="0,7,18,7"/>
+        <TextBlock x:Name="VersionLabel" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+        <InfoBar x:Name="SaveStatus" IsOpen="False" IsClosable="False" Severity="Success" Message="Configuración guardada y aplicada" VerticalAlignment="Center" Margin="276,7,18,7"/>
         <Button Grid.Column="1" x:Name="SaveButton" Content="Guardar" Style="{StaticResource AccentButtonStyle}" MinWidth="92" VerticalAlignment="Center" Click="SaveButton_Click"/>
       </Grid>
     </Border>

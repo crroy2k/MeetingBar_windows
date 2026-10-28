@@ -20,6 +20,7 @@ namespace MeetingBar.Windows.ViewModels
         private bool _isInitialLoading = true;
         private string _statusText;
         private int _selectedDayOffset;
+        public string VersionLabel => "v" + UpdateService.InstalledVersion;
         public ObservableCollection<CalendarEvent> Events { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<CalendarEvent> PageEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<CalendarEvent> TimelineEvents { get; } = new ObservableCollection<CalendarEvent>();

@@ -1,8 +1,10 @@
-#define AppVersion "0.1.0.6"
+#define AppVersion "0.1.0.7"
 [Setup]
 AppId={{304A805D-44D8-4121-A0CC-F323343BE269}
 AppName=MeetingBar
 AppVersion={#AppVersion}
+VersionInfoVersion={#AppVersion}
+VersionInfoProductVersion={#AppVersion}
 AppPublisher=MeetingBar contributors - crroy2k fork
 AppPublisherURL=https://github.com/crroy2k/MeetingBar_windows
 DefaultDirName={localappdata}\Programs\MeetingBar
@@ -45,12 +47,18 @@ Name: "{autodesktop}\MeetingBar"; Filename: "{app}\MeetingBar.exe"; Tasks: deskt
 
 [Run]
 Filename: "{app}\MeetingBar.exe"; Description: "Abrir MeetingBar"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\MeetingBar.exe"; Flags: nowait runasoriginaluser; Check: IsOtaUpdate
 
 [UninstallRun]
 Filename: "{app}\MeetingBar.exe"; Parameters: "--quit"; Flags: runhidden waituntilterminated; RunOnceId: "QuitMeetingBar"
 Filename: "{app}\MeetingBar.InstallConfig.exe"; Parameters: "--uninstall"; Flags: runhidden waituntilterminated; RunOnceId: "RemoveStartup"
 
 [Code]
+function IsOtaUpdate: Boolean;
+begin
+  Result := ExpandConstant('{param:OTA|0}') <> '0';
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var ResultCode: Integer;
 begin

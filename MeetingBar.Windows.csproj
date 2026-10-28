@@ -62,6 +62,7 @@
     <Page Include="Views\TaskbarWidgetWindow.xaml"><Generator>MSBuild:Compile</Generator><SubType>Designer</SubType></Page>
     <Page Include="Views\ReminderWindow.xaml"><Generator>MSBuild:Compile</Generator><SubType>Designer</SubType></Page>
     <Page Include="Views\EventDetailsWindow.xaml"><Generator>MSBuild:Compile</Generator><SubType>Designer</SubType></Page>
+    <Page Include="Views\UpdateWindow.xaml"><Generator>MSBuild:Compile</Generator><SubType>Designer</SubType></Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.xaml.cs"><DependentUpon>App.xaml</DependentUpon></Compile>
@@ -81,6 +82,7 @@
     <Compile Include="Services\GoogleCalendarProvider.cs" />
     <Compile Include="Services\CalendarSyncService.cs" />
     <Compile Include="Services\MeetingOpener.cs" />
+    <Compile Include="Services\UpdateService.cs" />
     <Compile Include="Services\OutlookCalendarNavigator.cs" />
     <Compile Include="Services\MapLinkService.cs" />
     <Compile Include="Services\NotificationService.cs" />
@@ -104,6 +106,7 @@
     <Compile Include="Views\TaskbarWidgetWindow.xaml.cs"><DependentUpon>TaskbarWidgetWindow.xaml</DependentUpon></Compile>
     <Compile Include="Views\ReminderWindow.xaml.cs"><DependentUpon>ReminderWindow.xaml</DependentUpon></Compile>
     <Compile Include="Views\EventDetailsWindow.xaml.cs"><DependentUpon>EventDetailsWindow.xaml</DependentUpon></Compile>
+    <Compile Include="Views\UpdateWindow.xaml.cs"><DependentUpon>UpdateWindow.xaml</DependentUpon></Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
 

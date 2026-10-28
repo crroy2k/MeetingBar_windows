@@ -16,6 +16,12 @@ namespace MeetingBar.Tests
             if (args.Length > 0 && args[0] == "--render-widget") { RenderWidget(args[1]); return; }
             if (args.Length > 0 && args[0] == "--render-fallback") { RenderWidget(args[1], true); return; }
             if (args.Length > 0 && args[0] == "--render-agenda") { RenderAgenda(args[1]); return; }
+            Test("update versions compare numerically and reject prerelease tags", UpdateTests.VersionPolicy);
+            Test("update metadata requires this repo installer and SHA-256", UpdateTests.MetadataPolicy);
+            Test("update redirects reject foreign hosts credentials and HTTP", UpdateTests.RedirectPolicy);
+            Test("updates check only on demand and bootstrap old releases", () => UpdateTests.OnDemandAndBootstrap().GetAwaiter().GetResult());
+            Test("update download verifies bytes before executable validation and rejects downgrades", () => UpdateTests.DownloadIntegrity().GetAwaiter().GetResult());
+            Test("updates reject redirected and oversized metadata", () => UpdateTests.RejectRedirectAndOversize().GetAwaiter().GetResult());
             Test("calendar navigation follows the event source rather than legacy provider settings", () =>
             {
                 var outlook = CalendarSourceSettings.Create(CalendarProviderKind.Outlook);

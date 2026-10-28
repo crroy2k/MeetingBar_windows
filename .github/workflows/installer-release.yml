@@ -82,6 +82,20 @@ jobs:
           $settings = Get-Content (Join-Path $configDir 'settings.json') -Raw | ConvertFrom-Json
           if ($settings.AutoJoin -ne $true -or $settings.InstallerTestMarker -ne 'preserved' -or $settings.StartWithWindows -ne $false) { throw 'Settings preservation failed' }
           if (!(Test-Path (Join-Path $configDir 'settings.json.before-install.bak'))) { throw 'Configuration backup missing' }
+          # Exercise the same silent handoff/relaunch flag used by the in-app updater.
+          $result = Start-Process $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/OTA=1',('/DIR="'+$testDir+'"')) -WindowStyle Hidden -Wait -PassThru
+          if ($result.ExitCode -ne 0) { throw 'OTA installer handoff failed' }
+          $relaunched = $null
+          for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            $relaunched = Get-Process MeetingBar -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq (Join-Path $testDir 'MeetingBar.exe') }
+            if ($relaunched) { break }
+            Start-Sleep -Milliseconds 500
+          }
+          if (!$relaunched) { throw 'OTA did not relaunch MeetingBar' }
+          Start-Process (Join-Path $testDir 'MeetingBar.exe') -ArgumentList '--quit' -WindowStyle Hidden -Wait
+          foreach ($process in $relaunched) {
+            if (!$process.WaitForExit(10000)) { throw 'MeetingBar did not close after the OTA smoke test' }
+          }
           $result = Start-Process (Join-Path $testDir 'unins000.exe') -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -WindowStyle Hidden -Wait -PassThru
           if ($result.ExitCode -ne 0 -or (Test-Path (Join-Path $testDir 'MeetingBar.exe'))) { throw 'Uninstall failed' }
       - name: Publish release and assets
@@ -93,6 +107,17 @@ jobs:
           $tag = 'v' + $env:MEETINGBAR_VERSION
           Copy-Item dist/MeetingBar-Windows-portable.zip "dist/MeetingBar-Windows-$tag-portable.zip"
           $assets = @("dist/MeetingBar-Windows-$tag-Setup.exe", "dist/MeetingBar-Windows-$tag-portable.zip")
+          $setup = Get-Item $assets[0]
+          $manifest = @{
+            schema_version = 1
+            tag_name = $tag
+            body = Get-Content Installer/RELEASE_NOTES.md -Raw
+            browser_download_url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$tag/$($setup.Name)"
+            digest = 'sha256:' + (Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            size = $setup.Length
+          }
+          $manifest | ConvertTo-Json -Depth 3 | Set-Content dist/update.json -Encoding utf8NoBOM
+          $assets += 'dist/update.json'
           $checksums = foreach ($asset in $assets) {
             "$((Get-FileHash $asset -Algorithm SHA256).Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($asset))"
           }

@@ -2,7 +2,15 @@
 
 MeetingBar muestra la reunión actual o siguiente en la bandeja del sistema y junto a la barra de tareas. Permite consultar la agenda, recibir recordatorios y abrir los enlaces de reunión.
 
-## Versión 0.1.0.6
+## Versión 0.1.0.7
+
+En Configuración → General, pulsa **Actualizar…** para consultar la versión marcada como **Latest** en GitHub. No se realizan comprobaciones automáticas al iniciar ni en segundo plano. La app muestra la versión instalada en pequeño, informa si hay una posterior y permite descargar e instalarla con confirmación.
+
+La descarga verifica el repositorio de origen, el tamaño, el SHA-256 y la versión del instalador antes de ejecutarlo. Requiere acceso a GitHub por HTTPS; si no hay conexión, puedes seguir usando Outlook y consultar de nuevo más tarde. La integridad se contrasta con los metadatos publicados en GitHub y no constituye una firma digital independiente.
+
+La actualización conserva tus ajustes y vuelve a abrir MeetingBar. Guarda primero los cambios pendientes de Configuración. Para incorporar esta función desde la 0.1.0.6, instala una vez el nuevo instalador.
+
+## Mejoras anteriores
 
 - «Abrir calendario» abre Outlook clásico directamente, sin depender de la asociación de Windows con el nuevo Outlook.
 - La agenda, los detalles, los recordatorios, la configuración y el instalador están en español.
