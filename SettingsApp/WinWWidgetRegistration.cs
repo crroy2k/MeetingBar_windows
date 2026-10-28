@@ -14,22 +14,22 @@ internal static class WinWWidgetRegistration
             var packages = manager.FindPackagesForUser(string.Empty, PackageName).ToList();
             foreach (var package in packages)
                 await manager.RemovePackageAsync(package.Id.FullName, RemovalOptions.PreserveApplicationData).AsTask();
-            return packages.Count == 0 ? "Settings saved and reloaded" : "Win+W widget provider removed";
+            return packages.Count == 0 ? "Configuración guardada y aplicada" : "Se quitó el proveedor del widget de Win+W";
         }
 
         var manifest = FindManifest();
-        if (manifest == null) throw new FileNotFoundException("The Win+W widget provider is missing. Re-extract the complete portable package.");
+        if (manifest == null) throw new FileNotFoundException("No se encuentra el proveedor de Win+W. Reinstala MeetingBar o extrae de nuevo el paquete completo.");
         var manifestFolder = Path.GetDirectoryName(manifest)!;
         var existing = manager.FindPackagesForUser(string.Empty, PackageName).FirstOrDefault();
         if (existing != null)
         {
-            if (string.Equals(Path.GetFullPath(existing.InstalledLocation.Path), manifestFolder, StringComparison.OrdinalIgnoreCase)) return "Settings saved and reloaded";
+            if (string.Equals(Path.GetFullPath(existing.InstalledLocation.Path), manifestFolder, StringComparison.OrdinalIgnoreCase)) return "Configuración guardada y aplicada";
             await manager.RemovePackageAsync(existing.Id.FullName, RemovalOptions.PreserveApplicationData).AsTask();
         }
         try { await manager.RegisterPackageAsync(new Uri(manifest), null, DeploymentOptions.DevelopmentMode).AsTask(); }
         catch (Exception error) when (unchecked((uint)error.HResult) == 0x80073CFF)
-        { throw new InvalidOperationException("Enable Windows Developer Mode under Settings > System > Advanced > For developers, then save again.", error); }
-        return "Widget provider installed. Press Win+W, choose Add widgets, then pin MeetingBar.";
+        { throw new InvalidOperationException("Activa el modo de desarrollador en la configuración de Windows y vuelve a guardar.", error); }
+        return "Widget instalado. Pulsa Win+W, elige «Agregar widgets» y fija MeetingBar.";
     }
 
     private static string? FindManifest()

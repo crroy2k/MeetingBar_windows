@@ -33,9 +33,9 @@ public sealed class CalendarSourceSettings
 
     public static string DefaultName(CalendarProviderKind provider) => provider switch
     {
-        CalendarProviderKind.Ics => "ICS calendar",
+        CalendarProviderKind.Ics => "Calendario ICS",
         CalendarProviderKind.Google => "Google Calendar",
-        _ => "Classic Outlook"
+        _ => "Outlook clásico"
     };
 }
 
@@ -63,7 +63,7 @@ public sealed class AppSettings
     public int TitleMaxLength { get; set; } = 64;
     public bool ShowServiceIcon { get; set; } = true;
     public EndOfDayWidgetBehavior EndOfDayWidgetBehavior { get; set; } = EndOfDayWidgetBehavior.NextEvent;
-    public string EndOfDayCustomMessage { get; set; } = "Done for today";
+    public string EndOfDayCustomMessage { get; set; } = "Jornada finalizada";
     public bool EnableWinWWidget { get; set; }
     public bool HighlightStartingMeetings { get; set; } = true;
     public int HighlightMinutesBefore { get; set; } = 5;
@@ -146,6 +146,8 @@ public sealed class AppSettings
                 ids.Add(source.Id);
                 changed = true;
             }
+            if (source.Name == "Classic Outlook") { source.Name = "Outlook clásico"; changed = true; }
+            if (source.Name == "ICS calendar") { source.Name = "Calendario ICS"; changed = true; }
             if (string.IsNullOrWhiteSpace(source.Name)) { source.Name = CalendarSourceSettings.DefaultName(source.Provider); changed = true; }
             if (source.SelectedCalendarIds == null) { source.SelectedCalendarIds = []; changed = true; }
         }
@@ -174,7 +176,7 @@ public sealed class SettingsState
 
 public sealed class DebugRequest
 {
-    public string Title { get; set; } = "Test meeting";
+    public string Title { get; set; } = "Reunión de prueba";
     public int StartMinutes { get; set; } = 5;
     public int DurationMinutes { get; set; } = 30;
     public string Service { get; set; } = "Google Meet";

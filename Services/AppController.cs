@@ -44,11 +44,11 @@ namespace MeetingBar.Windows.Services
             _tray = new Forms.NotifyIcon { Icon = _trayIcon, Visible = true, Text = "MeetingBar" };
             _tray.MouseClick += (s, e) => { if (e.Button == Forms.MouseButtons.Left) TogglePopup(); };
             var menu = new Forms.ContextMenuStrip();
-            menu.Items.Add("Open MeetingBar", null, (s, e) => ShowPopup());
-            menu.Items.Add("Refresh", null, async (s, e) => await _sync.RefreshAsync());
-            menu.Items.Add("Settings", null, (s, e) => OpenSettings());
+            menu.Items.Add("Abrir MeetingBar", null, (s, e) => ShowPopup());
+            menu.Items.Add("Actualizar", null, async (s, e) => await _sync.RefreshAsync());
+            menu.Items.Add("Configuración", null, (s, e) => OpenSettings());
             menu.Items.Add(new Forms.ToolStripSeparator());
-            menu.Items.Add("Quit", null, (s, e) => Application.Current.Shutdown());
+            menu.Items.Add("Salir", null, (s, e) => Application.Current.Shutdown());
             _tray.ContextMenuStrip = menu;
             _notifications = new NotificationService(_settings, _opener, _tray);
             _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) }; _positionTimer.Tick += (s, e) => { EnsureWidgetVisible(); UpdateTrayIcon(_main.TaskbarEvent); };
@@ -188,7 +188,7 @@ namespace MeetingBar.Windows.Services
             var executable = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Settings", "MeetingBar.Settings.exe");
             if (!File.Exists(executable))
             {
-                MessageBox.Show("The WinUI Settings folder is missing. Re-extract the complete portable package.", "MeetingBar", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("No se encuentra la carpeta de configuración. Reinstala MeetingBar o extrae de nuevo el paquete completo.", "MeetingBar", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
             var existing = Process.GetProcessesByName("MeetingBar.Settings").FirstOrDefault();
@@ -229,18 +229,18 @@ namespace MeetingBar.Windows.Services
                 : _settings.Current.CalendarSources.FirstOrDefault(x => string.Equals(x.Id, sourceId, StringComparison.OrdinalIgnoreCase));
             if (source == null || source.Provider != CalendarProviderKind.Google)
             {
-                WriteSettingsState("The Google calendar source no longer exists.", false, sourceId);
+                WriteSettingsState("La fuente de Google Calendar ya no existe.", false, sourceId);
                 return;
             }
-            WriteSettingsState("Opening Google sign-in. Choose the account to add and approve read-only calendar access.", true, source.Id);
+            WriteSettingsState("Abriendo el inicio de sesión de Google. Elige la cuenta y autoriza el acceso de solo lectura al calendario.", true, source.Id);
             try
             {
                 await _sync.Google.ConnectAsync(_settings.Current, source);
                 _settings.Save();
                 ApplySettings();
-                WriteSettingsState("Connected as " + source.GoogleAccountEmail + ". Loading calendars…", true, source.Id);
+                WriteSettingsState("Conectado como " + source.GoogleAccountEmail + ". Cargando calendarios…", true, source.Id);
                 await _sync.RefreshAsync();
-                WriteSettingsState("Connected as " + source.GoogleAccountEmail, false, source.Id);
+                WriteSettingsState("Conectado como " + source.GoogleAccountEmail, false, source.Id);
             }
             catch (Exception error)
             {
@@ -255,7 +255,7 @@ namespace MeetingBar.Windows.Services
             {
                 var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MeetingBar", "debug-request.json");
                 var request = File.Exists(path) ? new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(File.ReadAllText(path, Encoding.UTF8)) : null;
-                var title = DebugString(request, "Title", "Test meeting");
+                var title = DebugString(request, "Title", "Reunión de prueba");
                 var start = DebugInt(request, "StartMinutes", 5);
                 var duration = DebugInt(request, "DurationMinutes", 30);
                 var service = DebugString(request, "Service", "Google Meet");
@@ -267,7 +267,7 @@ namespace MeetingBar.Windows.Services
 
         private void TriggerDebugNotification(bool fullScreen)
         {
-            var item = _sync.LatestDebugEvent ?? DebugEventFactory.Create("Test meeting reminder", 5, 30, "Google Meet", "#0078D4", DateTime.Now);
+            var item = _sync.LatestDebugEvent ?? DebugEventFactory.Create("Recordatorio de prueba", 5, 30, "Google Meet", "#0078D4", DateTime.Now);
             _notifications.ShowTest(item, fullScreen);
         }
 
@@ -286,7 +286,7 @@ namespace MeetingBar.Windows.Services
                 var status = message;
                 if (string.IsNullOrWhiteSpace(status))
                 {
-                    status = !string.IsNullOrWhiteSpace(_sync.Status.Message) ? _sync.Status.Message : "Calendar sources ready";
+                    status = !string.IsNullOrWhiteSpace(_sync.Status.Message) ? _sync.Status.Message : "Fuentes de calendario listas";
                 }
                 var connectedEmails = _settings.Current.CalendarSources
                     .Where(x => x.Provider == CalendarProviderKind.Google && _sync.Google.IsConnected(x))
@@ -321,7 +321,7 @@ namespace MeetingBar.Windows.Services
         private void UpdateTray()
         {
             var item = _main.TaskbarEvent;
-            var text = item == null ? "MeetingBar — no upcoming meetings" : item.Title + " — " + item.Countdown;
+            var text = item == null ? "MeetingBar — sin reuniones próximas" : item.Title + " — " + item.Countdown;
             _tray.Text = text.Length > 63 ? text.Substring(0, 63) : text;
             UpdateTrayIcon(item);
             _widget?.ApplyPosition(_settings.Current);

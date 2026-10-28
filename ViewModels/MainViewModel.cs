@@ -57,16 +57,16 @@ namespace MeetingBar.Windows.ViewModels
                 {
                     switch (_settings.Current.EndOfDayWidgetBehavior)
                     {
-                        case EndOfDayWidgetBehavior.NoEventsToday: return "No events for today";
-                        case EndOfDayWidgetBehavior.CustomMessage: return TruncateWidgetTitle(string.IsNullOrWhiteSpace(_settings.Current.EndOfDayCustomMessage) ? "Done for today" : _settings.Current.EndOfDayCustomMessage.Trim());
+                        case EndOfDayWidgetBehavior.NoEventsToday: return "No hay más citas hoy";
+                        case EndOfDayWidgetBehavior.CustomMessage: return TruncateWidgetTitle(string.IsNullOrWhiteSpace(_settings.Current.EndOfDayCustomMessage) ? "Jornada finalizada" : MeetingBar.Localization.SpanishText.EndOfDayMessage(_settings.Current.EndOfDayCustomMessage.Trim()));
                         default: return "Sin citas próximas";
                     }
                 }
                 var mode = _settings.Current.TitleMode;
                 if (mode == TitleMode.Hidden) return "";
                 if (mode == TitleMode.Dot) return "•";
-                if (mode == TitleMode.Generic) return "Meeting";
-                return WidgetEvent.Title ?? "Untitled event";
+                if (mode == TitleMode.Generic) return "Reunión";
+                return WidgetEvent.Title ?? "Evento sin título";
             }
         }
         public string WidgetTime => WidgetEvent == null || _settings.Current.TimeMode == TimeMode.Hidden ? "" : _settings.Current.TimeMode == TimeMode.DateAndTime
@@ -104,34 +104,13 @@ namespace MeetingBar.Windows.ViewModels
             _clock.Tick += (s, e) => { _sync.RestoreExpiredDismissals(DateTime.Now); foreach (var item in TimelineEvents) item.RefreshComputed(); RaiseComputed(); };
             _clock.Start(); Rebuild();
         }
-        public bool CanOpenCalendar => _settings.Current.Provider != CalendarProviderKind.Ics || !string.IsNullOrWhiteSpace(NextEvent?.CalendarOpenUrl);
-        private void OpenCalendar()
-        {
-            switch (_settings.Current.Provider)
-            {
-                case CalendarProviderKind.Google: _opener.Open("https://calendar.google.com/calendar/u/0/r"); break;
-                case CalendarProviderKind.Outlook:
-                    try { _opener.Open("outlookcal:"); }
-                    catch { _opener.Open("https://outlook.office.com/calendar/"); }
-                    break;
-                default: _opener.Open(NextEvent?.CalendarOpenUrl); break;
-            }
-        }
+        public bool CanOpenCalendar => _opener.CanOpenCalendar(NextEvent);
+        private void OpenCalendar() => _opener.OpenCalendar(NextEvent);
 
-        private bool CanOpenEventInCalendar(object value)
-        {
-            var item = value as CalendarEvent;
-            return item != null && (!string.IsNullOrWhiteSpace(item.CalendarOpenUrl) || !string.IsNullOrWhiteSpace(item.EventUrl) || _settings.Current.Provider != CalendarProviderKind.Ics);
-        }
-
+        private bool CanOpenEventInCalendar(object value) => value is CalendarEvent item && _opener.CanOpenCalendar(item);
         private void OpenEventInCalendar(object value)
         {
-            var item = value as CalendarEvent;
-            if (item == null) return;
-            var url = item.CalendarOpenUrl ?? item.EventUrl;
-            if (!string.IsNullOrWhiteSpace(url)) { _opener.Open(url); return; }
-            if (_settings.Current.Provider == CalendarProviderKind.Outlook) _opener.Open("outlookcal:");
-            else if (_settings.Current.Provider == CalendarProviderKind.Google) _opener.Open("https://calendar.google.com/calendar/u/0/r");
+            if (value is CalendarEvent item) _opener.OpenCalendar(item);
         }
 
         private async Task Refresh() { IsRefreshing = true; await _sync.RefreshAsync(); IsRefreshing = false; }

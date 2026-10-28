@@ -66,6 +66,7 @@
   <ItemGroup>
     <Compile Include="App.xaml.cs"><DependentUpon>App.xaml</DependentUpon></Compile>
     <Compile Include="Models\CalendarEvent.cs" />
+    <Compile Include="Models\SpanishText.cs" />
     <Compile Include="Models\CalendarInfo.cs" />
     <Compile Include="Models\AppSettings.cs" />
     <Compile Include="Models\Bookmark.cs" />
@@ -80,6 +81,7 @@
     <Compile Include="Services\GoogleCalendarProvider.cs" />
     <Compile Include="Services\CalendarSyncService.cs" />
     <Compile Include="Services\MeetingOpener.cs" />
+    <Compile Include="Services\OutlookCalendarNavigator.cs" />
     <Compile Include="Services\MapLinkService.cs" />
     <Compile Include="Services\NotificationService.cs" />
     <Compile Include="Services\StartupService.cs" />

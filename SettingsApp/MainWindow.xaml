@@ -2,8 +2,8 @@
     x:Class="MeetingBar.SettingsApp.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="MeetingBar Settings">
-  <Grid x:Name="RootGrid" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Title="Configuración de MeetingBar">
+  <Grid x:Name="RootGrid" Language="es-CR" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
     <Grid.RowDefinitions>
       <RowDefinition Height="48"/>
       <RowDefinition Height="*"/>
@@ -11,7 +11,7 @@
     </Grid.RowDefinitions>
 
     <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="24,0,0,0">
-      <TextBlock Text="Settings" VerticalAlignment="Center" FontSize="12"/>
+      <TextBlock Text="Configuración" VerticalAlignment="Center" FontSize="12"/>
     </Grid>
 
     <NavigationView x:Name="Navigation" Grid.Row="1" IsPaneOpen="True" PaneDisplayMode="Left" OpenPaneLength="300"
@@ -26,19 +26,19 @@
             </Border>
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
               <TextBlock Text="MeetingBar" FontSize="15" FontWeight="SemiBold"/>
-              <TextBlock Text="Calendar companion" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+              <TextBlock Text="Tu calendario a mano" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
           </Grid>
         </StackPanel>
       </NavigationView.PaneHeader>
       <NavigationView.MenuItems>
         <NavigationViewItem Content="Widget" Tag="Widget" x:Name="WidgetItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xE7F4;"/></NavigationViewItem.Icon></NavigationViewItem>
-        <NavigationViewItem Content="Calendars" Tag="Calendars" x:Name="CalendarsItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xE787;"/></NavigationViewItem.Icon></NavigationViewItem>
-        <NavigationViewItem Content="Events" Tag="Events" x:Name="EventsItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xE8FD;"/></NavigationViewItem.Icon></NavigationViewItem>
-        <NavigationViewItem Content="Meetings" Tag="Meetings" x:Name="MeetingsItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xE714;"/></NavigationViewItem.Icon></NavigationViewItem>
-        <NavigationViewItem Content="Reminders" Tag="Reminders" x:Name="RemindersItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xEA8F;"/></NavigationViewItem.Icon></NavigationViewItem>
+        <NavigationViewItem Content="Calendarios" Tag="Calendars" x:Name="CalendarsItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xE787;"/></NavigationViewItem.Icon></NavigationViewItem>
+        <NavigationViewItem Content="Eventos" Tag="Events" x:Name="EventsItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xE8FD;"/></NavigationViewItem.Icon></NavigationViewItem>
+        <NavigationViewItem Content="Reuniones" Tag="Meetings" x:Name="MeetingsItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xE714;"/></NavigationViewItem.Icon></NavigationViewItem>
+        <NavigationViewItem Content="Recordatorios" Tag="Reminders" x:Name="RemindersItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xEA8F;"/></NavigationViewItem.Icon></NavigationViewItem>
         <NavigationViewItem Content="General" Tag="General" x:Name="GeneralItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xE713;"/></NavigationViewItem.Icon></NavigationViewItem>
-        <NavigationViewItem Content="Debug" Tag="Debug" x:Name="DebugItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;"/></NavigationViewItem.Icon></NavigationViewItem>
+        <NavigationViewItem Content="Pruebas" Tag="Debug" x:Name="DebugItem"><NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;"/></NavigationViewItem.Icon></NavigationViewItem>
       </NavigationView.MenuItems>
       <NavigationView.Content>
         <ScrollViewer x:Name="PageScroller" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
@@ -52,8 +52,8 @@
     <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorDefaultBrush}">
       <Grid Margin="300,0,38,0">
         <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-        <InfoBar x:Name="SaveStatus" IsOpen="False" IsClosable="False" Severity="Success" Message="Settings saved and reloaded" VerticalAlignment="Center" Margin="0,7,18,7"/>
-        <Button Grid.Column="1" x:Name="SaveButton" Content="Save" Style="{StaticResource AccentButtonStyle}" MinWidth="92" VerticalAlignment="Center" Click="SaveButton_Click"/>
+        <InfoBar x:Name="SaveStatus" IsOpen="False" IsClosable="False" Severity="Success" Message="Configuración guardada y aplicada" VerticalAlignment="Center" Margin="0,7,18,7"/>
+        <Button Grid.Column="1" x:Name="SaveButton" Content="Guardar" Style="{StaticResource AccentButtonStyle}" MinWidth="92" VerticalAlignment="Center" Click="SaveButton_Click"/>
       </Grid>
     </Border>
   </Grid>

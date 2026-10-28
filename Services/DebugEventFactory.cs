@@ -12,7 +12,7 @@ namespace MeetingBar.Windows.Services
             ["Google Meet"] = "https://meet.google.com/debug-test",
             ["Microsoft Teams"] = "https://teams.microsoft.com/l/meetup-join/debug-test",
             ["Zoom"] = "https://zoom.us/j/123456789",
-            ["No meeting link"] = null
+            ["Sin enlace de reunión"] = null
         };
 
         public static CalendarEvent Create(string title, int startMinutes, int durationMinutes, string service, string color, DateTime now)
@@ -23,17 +23,17 @@ namespace MeetingBar.Windows.Services
             return new CalendarEvent
             {
                 Id = "debug-" + Guid.NewGuid().ToString("N"),
-                Title = string.IsNullOrWhiteSpace(title) ? "Test meeting" : title.Trim(),
+                Title = string.IsNullOrWhiteSpace(title) ? "Reunión de prueba" : title.Trim(),
                 Start = start,
                 End = start.AddMinutes(Math.Max(1, Math.Min(1440, durationMinutes))),
                 CalendarId = "meetingbar-debug",
-                CalendarName = "MeetingBar Debug",
+                CalendarName = "Pruebas de MeetingBar",
                 CalendarColor = Regex.IsMatch(color ?? "", "^#[0-9A-Fa-f]{6}$") ? color : "#0078D4",
                 Organizer = "debug@meetingbar.local",
-                MeetingService = string.Equals(service, "No meeting link", StringComparison.OrdinalIgnoreCase) ? null : service,
+                MeetingService = string.Equals(service, "Sin enlace de reunión", StringComparison.OrdinalIgnoreCase) ? null : service,
                 MeetingUrl = link,
                 ConferenceUrl = link,
-                Notes = "Injected locally from MeetingBar Settings. Not stored in your calendar."
+                Notes = "Evento local creado desde Configuración. No se guarda en tu calendario."
             };
         }
     }

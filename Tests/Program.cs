@@ -16,6 +16,36 @@ namespace MeetingBar.Tests
             if (args.Length > 0 && args[0] == "--render-widget") { RenderWidget(args[1]); return; }
             if (args.Length > 0 && args[0] == "--render-fallback") { RenderWidget(args[1], true); return; }
             if (args.Length > 0 && args[0] == "--render-agenda") { RenderAgenda(args[1]); return; }
+            Test("calendar navigation follows the event source rather than legacy provider settings", () =>
+            {
+                var outlook = CalendarSourceSettings.Create(CalendarProviderKind.Outlook);
+                var google = CalendarSourceSettings.Create(CalendarProviderKind.Google);
+                var ics = CalendarSourceSettings.Create(CalendarProviderKind.Ics);
+                var settings = new AppSettings { Provider = CalendarProviderKind.Google, CalendarSources = new List<CalendarSourceSettings> { outlook, google, ics } };
+                Equal(CalendarProviderKind.Outlook, MeetingOpener.CalendarProviderFor(settings, null));
+                Equal(CalendarProviderKind.Outlook, MeetingOpener.CalendarProviderFor(settings, new CalendarEvent { SourceId = outlook.Id }));
+                Equal(CalendarProviderKind.Google, MeetingOpener.CalendarProviderFor(settings, new CalendarEvent { SourceId = google.Id }));
+                Equal(CalendarProviderKind.Ics, MeetingOpener.CalendarProviderFor(settings, new CalendarEvent { SourceId = ics.Id }));
+                outlook.Enabled = false;
+                Equal(CalendarProviderKind.Google, MeetingOpener.CalendarProviderFor(settings, null));
+            });
+            Test("Spanish labels do not replace user text or calendar identifiers", () =>
+            {
+                Equal("Outlook clásico", MeetingBar.Localization.SpanishText.SourceName("Classic Outlook"));
+                Equal("Mi calendario de trabajo", MeetingBar.Localization.SpanishText.SourceName("Mi calendario de trabajo"));
+                Equal("Terminé por hoy", MeetingBar.Localization.SpanishText.EndOfDayMessage("Terminé por hoy"));
+                Equal("Jornada finalizada", MeetingBar.Localization.SpanishText.EndOfDayMessage("Done for today"));
+                var settings = new AppSettings { CalendarSourcesVersion = 1, CalendarSources = new List<CalendarSourceSettings> {
+                    new CalendarSourceSettings { Id = "stable-id", Name = "Classic Outlook", Provider = CalendarProviderKind.Outlook, SelectedCalendarIds = new List<string> { "calendar-id" }, CalendarSelectionConfigured = true },
+                    new CalendarSourceSettings { Id = "custom-id", Name = "Mi trabajo", Provider = CalendarProviderKind.Outlook } } };
+                settings.EnsureCalendarSources();
+                Equal("Outlook clásico", settings.CalendarSources[0].Name);
+                Equal("stable-id", settings.CalendarSources[0].Id);
+                Equal("calendar-id", settings.CalendarSources[0].SelectedCalendarIds[0]);
+                Equal("Mi trabajo", settings.CalendarSources[1].Name);
+                Equal("HOY", new CalendarEvent { Start = DateTime.Today }.DayLabel);
+                Equal("Todo el día", new CalendarEvent { IsAllDay = true }.TimeRange);
+            });
             Test("monitor selection survives disconnect and reconnect", () =>
             {
                 var primary = new MeetingBar.Display.MonitorChoice { DeviceName = "primary", Primary = true };
@@ -70,9 +100,9 @@ namespace MeetingBar.Tests
                 Equal(false, new AppSettings().Use24HourClock);
                 Equal("En 1 d", EventWindowPolicy.WidgetTiming(item, now, false));
                 item.Start = now.AddHours(23); item.End = item.Start.AddHours(1);
-                Equal("Mañana, 1:00 PM", EventWindowPolicy.WidgetTiming(item, now, false));
+                Equal("Mañana, 1:00 p. m.", EventWindowPolicy.WidgetTiming(item, now, false));
                 item.Start = now.AddMinutes(30); item.End = item.Start.AddHours(1);
-                Equal("Hoy, 2:30 PM", EventWindowPolicy.WidgetTiming(item, now, false));
+                Equal("Hoy, 2:30 p. m.", EventWindowPolicy.WidgetTiming(item, now, false));
                 item.Start = now.AddMinutes(-30); item.End = now.AddMinutes(45);
                 Equal("Quedan 45 min", EventWindowPolicy.WidgetTiming(item, now, false));
             });
@@ -178,7 +208,7 @@ namespace MeetingBar.Tests
                 Equal(true, FullscreenWidgetVisibilityService.MatchesBlacklist(blacklist, null, "GAME"));
             });
             Test("requires Google Calendar read-only scope", () => { Equal(true, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/calendar.readonly")); Equal(false, GoogleCalendarProvider.HasCalendarScope("openid https://www.googleapis.com/auth/userinfo.email")); });
-            Test("explains disabled Google Calendar API", () => Contains("not enabled", GoogleCalendarProvider.ApiErrorMessage(System.Net.HttpStatusCode.Forbidden, "{\"error\":{\"errors\":[{\"reason\":\"accessNotConfigured\"}]}}")));
+            Test("explains disabled Google Calendar API", () => Contains("no está habilitada", GoogleCalendarProvider.ApiErrorMessage(System.Net.HttpStatusCode.Forbidden, "{\"error\":{\"errors\":[{\"reason\":\"accessNotConfigured\"}]}}")));
             Test("maps Google event-specific colors", () =>
             {
                 var colors = new Dictionary<string, object> { ["event"] = new Dictionary<string, object> { ["5"] = new Dictionary<string, object> { ["background"] = "#f6bf26" } } };
@@ -194,7 +224,7 @@ namespace MeetingBar.Tests
             {
                 var current = new CalendarEvent { Start = DateTime.Now.AddMinutes(-10), End = DateTime.Now.AddMinutes(25) };
                 var past = new CalendarEvent { Start = DateTime.Now.AddHours(-2), End = DateTime.Now.AddMinutes(-20) };
-                Contains("left", current.Remaining); Equal("Ended", past.Countdown); Contains("ago", past.DetailedCountdown);
+                Contains("restantes", current.Remaining); Equal("Finalizada", past.Countdown); Contains("hace", past.DetailedCountdown);
             });
             Test("multiple notification times stay independent", () =>
             {
@@ -238,7 +268,7 @@ namespace MeetingBar.Tests
                 var item = new CalendarEvent { Start = new DateTime(2026, 7, 16, 13, 5, 0), End = new DateTime(2026, 7, 16, 14, 0, 0), Use24HourClock = true };
                 Equal("13:05", item.StartTimeText);
                 item.Use24HourClock = false;
-                Equal("1:05 PM", item.StartTimeText);
+                Equal("1:05 p. m.", item.StartTimeText);
             });
             Test("timeline date supports configured full-date formats", () =>
             {

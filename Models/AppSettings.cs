@@ -33,9 +33,9 @@ namespace MeetingBar.Windows.Models
         {
             switch (provider)
             {
-                case CalendarProviderKind.Ics: return "ICS calendar";
+                case CalendarProviderKind.Ics: return "Calendario ICS";
                 case CalendarProviderKind.Google: return "Google Calendar";
-                default: return "Classic Outlook";
+                default: return "Outlook clásico";
             }
         }
     }
@@ -58,7 +58,7 @@ namespace MeetingBar.Windows.Models
         public int TitleMaxLength { get; set; } = 64;
         public bool ShowServiceIcon { get; set; } = true;
         public EndOfDayWidgetBehavior EndOfDayWidgetBehavior { get; set; } = EndOfDayWidgetBehavior.NextEvent;
-        public string EndOfDayCustomMessage { get; set; } = "Done for today";
+        public string EndOfDayCustomMessage { get; set; } = "Jornada finalizada";
         public bool EnableWinWWidget { get; set; }
         public bool HighlightStartingMeetings { get; set; } = true;
         public int HighlightMinutesBefore { get; set; } = 5;
@@ -142,6 +142,8 @@ namespace MeetingBar.Windows.Models
                     ids.Add(source.Id);
                     changed = true;
                 }
+                if (source.Name == "Classic Outlook") { source.Name = "Outlook clásico"; changed = true; }
+                if (source.Name == "ICS calendar") { source.Name = "Calendario ICS"; changed = true; }
                 if (string.IsNullOrWhiteSpace(source.Name)) { source.Name = CalendarSourceSettings.DefaultName(source.Provider); changed = true; }
                 if (source.SelectedCalendarIds == null) { source.SelectedCalendarIds = new List<string>(); changed = true; }
             }

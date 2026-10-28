@@ -50,6 +50,7 @@ if ($Package) {
         (Join-Path $root "raycast")
         (Join-Path $root "docs")
         (Join-Path $root "README.md")
+        (Join-Path $root "README.es.md")
         (Join-Path $root "THIRD-PARTY-NOTICES.md")
         (Join-Path $root "LICENSE")
     )

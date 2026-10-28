@@ -146,7 +146,7 @@ namespace MeetingBar.Windows.Views
 
             var anchor = now.AddHours(offsetHours);
             var dayOffset = (anchor.Date - now.Date).Days;
-            var dayName = dayOffset == 0 ? "TODAY" : dayOffset == -1 ? "YESTERDAY" : dayOffset == 1 ? "TOMORROW" : anchor.ToString("ddd, d MMM", CultureInfo.CurrentCulture).ToUpperInvariant();
+            var dayName = dayOffset == 0 ? "HOY" : dayOffset == -1 ? "AYER" : dayOffset == 1 ? "MAÑANA" : anchor.ToString("ddd, d MMM", MeetingBar.Localization.SpanishText.Culture).ToUpperInvariant();
             drawingContext.DrawText(Text(dayName, 9, FontWeights.SemiBold, muted, pixelsPerDip), new Point(0, 0));
             if (ShowTimelineDate)
             {
@@ -158,6 +158,7 @@ namespace MeetingBar.Windows.Views
             var durationHours = (rangeEnd - rangeStart).TotalHours;
             var labelInterval = durationHours <= 10 ? 2 : durationHours <= 17 ? 3 : 4;
             var hourIndex = 1;
+            var labels = new List<Tuple<FormattedText, Rect, bool>>();
             for (var hour = firstHour; hour < rangeEnd; hour = hour.AddHours(1), hourIndex++)
             {
                 var x = X(hour, rangeStart, rangeTicks, width);
@@ -166,8 +167,18 @@ namespace MeetingBar.Windows.Views
                 if (hourIndex % labelInterval == 0 || midnight)
                 {
                     var label = Text(CalendarEvent.FormatTime(hour, Use24HourClock, !Use24HourClock), 9, midnight ? FontWeights.SemiBold : FontWeights.Normal, muted, pixelsPerDip);
-                    drawingContext.DrawText(label, new Point(Math.Max(0, Math.Min(width - label.Width, x - label.Width / 2)), 14));
+                    labels.Add(Tuple.Create(label, new Rect(Math.Max(0, Math.Min(width - label.Width, x - label.Width / 2)), 14, label.Width, label.Height), midnight));
                 }
+            }
+            // Spanish hour designators are wider. Keep midnight readable and omit overlapping labels.
+            var occupiedLabels = new List<Rect>();
+            foreach (var label in labels.OrderByDescending(x => x.Item3))
+            {
+                var bounds = label.Item2;
+                bounds.Inflate(4, 0);
+                if (occupiedLabels.Any(x => x.IntersectsWith(bounds))) continue;
+                occupiedLabels.Add(bounds);
+                drawingContext.DrawText(label.Item1, label.Item2.TopLeft);
             }
 
             var visible = (Events ?? Enumerable.Empty<object>()).Cast<object>().OfType<CalendarEvent>()

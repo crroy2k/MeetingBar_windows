@@ -43,11 +43,11 @@ namespace MeetingBar.Windows.Models
         public bool CanRestoreNotifications => IsDismissed && !IsPast;
         public bool CanOpenDetails => !string.IsNullOrWhiteSpace(CalendarOpenUrl);
         public string StartTimeText => IsAllDay ? "Todo el día" : FormatTime(Start, Use24HourClock);
-        public string TimeRange => IsAllDay ? "All day" : FormatTime(Start, Use24HourClock) + " – " + FormatTime(End, Use24HourClock);
-        public string DayLabel => Start.Date == DateTime.Today ? "TODAY" : Start.Date == DateTime.Today.AddDays(1) ? "TOMORROW" : Start.ToString("ddd, d MMM").ToUpperInvariant();
+        public string TimeRange => IsAllDay ? "Todo el día" : FormatTime(Start, Use24HourClock) + " – " + FormatTime(End, Use24HourClock);
+        public string DayLabel => Start.Date == DateTime.Today ? "HOY" : Start.Date == DateTime.Today.AddDays(1) ? "MAÑANA" : Start.ToString("ddd, d MMM", MeetingBar.Localization.SpanishText.Culture).ToUpperInvariant();
         public static string FormatTime(DateTime value, bool use24HourClock, bool hourOnly = false) => value.ToString(
             use24HourClock ? (hourOnly ? "HH" : "HH:mm") : (hourOnly ? "h tt" : "h:mm tt"),
-            use24HourClock ? CultureInfo.CurrentCulture : CultureInfo.InvariantCulture);
+            MeetingBar.Localization.SpanishText.Culture);
         public static string FormatDate(DateTime value, string format)
         {
             switch (format)
@@ -55,36 +55,36 @@ namespace MeetingBar.Windows.Models
                 case "MM/dd/yyyy": case "dd/MM/yyyy": case "yyyy-MM-dd": case "dd MMM yyyy": break;
                 default: format = "dd.MM.yyyy"; break;
             }
-            return value.ToString(format, CultureInfo.CurrentCulture);
+            return value.ToString(format, MeetingBar.Localization.SpanishText.Culture);
         }
         public string CalendarDisplayName
         {
             get
             {
-                if (string.IsNullOrWhiteSpace(CalendarName)) return CalendarSourceName;
-                if (string.IsNullOrWhiteSpace(CalendarSourceName) || string.Equals(CalendarName, CalendarSourceName, StringComparison.OrdinalIgnoreCase)) return CalendarName;
-                return CalendarName + " · " + CalendarSourceName;
+                if (string.IsNullOrWhiteSpace(CalendarName)) return MeetingBar.Localization.SpanishText.SourceName(CalendarSourceName);
+                if (string.IsNullOrWhiteSpace(CalendarSourceName) || string.Equals(CalendarName, CalendarSourceName, StringComparison.OrdinalIgnoreCase)) return MeetingBar.Localization.SpanishText.SourceName(CalendarName);
+                return CalendarName + " · " + MeetingBar.Localization.SpanishText.SourceName(CalendarSourceName);
             }
         }
-        public string CalendarDetails => string.IsNullOrWhiteSpace(CalendarDisplayName) ? null : "Calendar  ·  " + CalendarDisplayName;
-        public string OrganizerDetails => string.IsNullOrWhiteSpace(Organizer) ? null : "Organizer  ·  " + Organizer;
-        public string LocationDetails => string.IsNullOrWhiteSpace(Location) ? null : "Location  ·  " + Location;
-        public string MeetingDetails => string.IsNullOrWhiteSpace(MeetingService) ? null : "Meeting link  ·  " + MeetingService;
+        public string CalendarDetails => string.IsNullOrWhiteSpace(CalendarDisplayName) ? null : "Calendario  ·  " + CalendarDisplayName;
+        public string OrganizerDetails => string.IsNullOrWhiteSpace(Organizer) ? null : "Organizador  ·  " + Organizer;
+        public string LocationDetails => string.IsNullOrWhiteSpace(Location) ? null : "Ubicación  ·  " + Location;
+        public string MeetingDetails => string.IsNullOrWhiteSpace(MeetingService) ? null : "Enlace de reunión  ·  " + MeetingService;
         public string DetailsNotes => string.IsNullOrWhiteSpace(Notes) ? null : WebUtility.HtmlDecode(Regex.Replace(Notes, "<[^>]+>", " ")).Trim();
         public string Countdown
         {
             get
             {
-                if (IsCurrent) return "Now";
+                if (IsCurrent) return "Ahora";
                 if (IsPast)
                 {
-                    return "Ended";
+                    return "Finalizada";
                 }
                 var span = Start - DateTime.Now;
-                if (span.TotalMinutes < 1) return "Soon";
-                if (span.TotalHours < 1) return "in " + Math.Ceiling(span.TotalMinutes) + "m";
-                if (span.TotalDays < 1) return "in " + Math.Floor(span.TotalHours) + "h " + span.Minutes + "m";
-                return "in " + Math.Floor(span.TotalDays) + "d";
+                if (span.TotalMinutes < 1) return "En breve";
+                if (span.TotalHours < 1) return "En " + Math.Ceiling(span.TotalMinutes) + " min";
+                if (span.TotalDays < 1) return "En " + Math.Floor(span.TotalHours) + " h " + span.Minutes + " min";
+                return "En " + Math.Floor(span.TotalDays) + " d";
             }
         }
         public string DetailedCountdown
@@ -93,10 +93,10 @@ namespace MeetingBar.Windows.Models
             {
                 if (!IsPast) return Countdown;
                 var elapsed = DateTime.Now - End;
-                if (elapsed.TotalMinutes < 1) return "Just ended";
-                if (elapsed.TotalHours < 1) return "Ended " + Math.Floor(elapsed.TotalMinutes) + "m ago";
-                if (elapsed.TotalDays < 1) return "Ended " + Math.Floor(elapsed.TotalHours) + "h " + elapsed.Minutes + "m ago";
-                return "Ended " + Math.Floor(elapsed.TotalDays) + "d ago";
+                if (elapsed.TotalMinutes < 1) return "Acaba de finalizar";
+                if (elapsed.TotalHours < 1) return "Finalizó hace " + Math.Floor(elapsed.TotalMinutes) + " min";
+                if (elapsed.TotalDays < 1) return "Finalizó hace " + Math.Floor(elapsed.TotalHours) + " h " + elapsed.Minutes + " min";
+                return "Finalizó hace " + Math.Floor(elapsed.TotalDays) + " d";
             }
         }
         public string Remaining
@@ -105,9 +105,9 @@ namespace MeetingBar.Windows.Models
             {
                 if (!IsCurrent) return Countdown;
                 var remaining = End - DateTime.Now;
-                if (remaining.TotalMinutes < 1) return "Less than 1m left";
-                if (remaining.TotalHours < 1) return Math.Ceiling(remaining.TotalMinutes) + "m left";
-                return Math.Floor(remaining.TotalHours) + "h " + remaining.Minutes + "m left";
+                if (remaining.TotalMinutes < 1) return "Menos de 1 min restante";
+                if (remaining.TotalHours < 1) return Math.Ceiling(remaining.TotalMinutes) + " min restantes";
+                return Math.Floor(remaining.TotalHours) + " h " + remaining.Minutes + " min restantes";
             }
         }
 

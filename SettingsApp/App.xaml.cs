@@ -8,6 +8,7 @@ public partial class App : Application
 
     public App()
     {
+        MeetingBar.Localization.SpanishText.Initialize();
         InitializeComponent();
         UnhandledException += (_, args) =>
         {

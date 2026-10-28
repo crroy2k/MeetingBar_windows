@@ -24,8 +24,8 @@ internal static class Program
             var path = Path.Combine(folder, "settings.json");
             var json = new JavaScriptSerializer { MaxJsonLength = 1024 * 1024 };
             var settings = File.Exists(path) ? json.Deserialize<Dictionary<string, object>>(File.ReadAllText(path, Encoding.UTF8)) : new Dictionary<string, object>();
-            if (settings == null) throw new InvalidDataException("Invalid existing settings; configuration was preserved.");
-            settings["AutoJoin"] = false;
+            if (settings == null) throw new InvalidDataException("La configuración existente no es válida; se ha conservado sin cambios.");
+            if (!settings.ContainsKey("AutoJoin")) settings["AutoJoin"] = false;
             if (!settings.ContainsKey("StartWithWindows")) settings["StartWithWindows"] = true;
             if (!settings.ContainsKey("Provider")) settings["Provider"] = 0;
             var temporary = path + ".install.tmp";

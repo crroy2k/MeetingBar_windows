@@ -16,6 +16,9 @@ namespace MeetingBar.Windows
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            MeetingBar.Localization.SpanishText.Initialize();
+            FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
+                new FrameworkPropertyMetadata(System.Windows.Markup.XmlLanguage.GetLanguage("es-CR")));
             bool created;
             _singleInstance = new Mutex(true, "Local\\MeetingBar.Windows", out created);
             if (!created) { SendCommand(e.Args.Length == 0 ? "popup" : e.Args[0].TrimStart('-')); Shutdown(); return; }

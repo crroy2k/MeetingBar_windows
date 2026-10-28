@@ -1,3 +1,11 @@
+# Versión 0.1.0.6 — Outlook clásico y español
+
+- «Abrir calendario» usa Outlook clásico directamente y abre el calendario de la fuente del evento.
+- Traducción al español de la agenda, los detalles, los recordatorios, los ajustes y el instalador.
+- Fechas, horas, estados vacíos, ayudas de accesibilidad y nombres predeterminados coherentes en español.
+- Se conservan los ajustes existentes y se respeta la elección de acceso automático a las reuniones.
+- La sincronización de Outlook conserva su lógica y el formato regional utilizado para consultar las citas.
+
 Versión optimizada con instalador para Windows de 64 bits.
 
 ## Descargar e instalar

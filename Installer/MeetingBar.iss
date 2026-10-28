@@ -1,4 +1,4 @@
-#define AppVersion "0.1.0.5"
+#define AppVersion "0.1.0.6"
 [Setup]
 AppId={{304A805D-44D8-4121-A0CC-F323343BE269}
 AppName=MeetingBar
@@ -21,10 +21,11 @@ CloseApplications=yes
 RestartApplications=no
 WizardStyle=modern
 DisableProgramGroupPage=yes
+ShowLanguageDialog=no
+LanguageDetectionMethod=none
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
-Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Crear un acceso directo en el escritorio"; Flags: unchecked
@@ -36,7 +37,7 @@ Source: "..\bin\Release\net472\Settings\*"; DestDir: "{app}\Settings"; Flags: ig
 Source: "..\bin\Release\net472\WinWWidget\*"; DestDir: "{app}\WinWWidget"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\LICENSE"; DestDir: "{app}"
 Source: "..\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"
-Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\README.es.md"; DestDir: "{app}"; DestName: "README.md"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\MeetingBar"; Filename: "{app}\MeetingBar.exe"
@@ -57,6 +58,6 @@ begin
     if not Exec(ExpandConstant('{app}\MeetingBar.InstallConfig.exe'), '', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
       RaiseException('No se pudo configurar MeetingBar.');
     if ResultCode <> 0 then
-      RaiseException('No se pudo actualizar la configuracion. La configuracion anterior se ha conservado.');
+      RaiseException('No se pudo actualizar la configuración. La configuración anterior se ha conservado.');
   end;
 end;

@@ -23,7 +23,7 @@ namespace MeetingBar.Windows.Services
         public IReadOnlyList<CalendarEvent> TimelineEvents { get; private set; } = new List<CalendarEvent>();
         public IReadOnlyList<CalendarEvent> UpcomingEvents { get; private set; } = new List<CalendarEvent>();
         public IReadOnlyList<CalendarInfo> Calendars { get; private set; } = new List<CalendarInfo>();
-        public ProviderStatus Status { get; private set; } = new ProviderStatus { Provider = "Calendar", Message = "Starting…" };
+        public ProviderStatus Status { get; private set; } = new ProviderStatus { Provider = "Calendario", Message = "Iniciando…" };
         public event EventHandler Changed;
 
         public CalendarSyncService(SettingsService settings) { _settings = settings; }
@@ -70,16 +70,16 @@ namespace MeetingBar.Windows.Services
                 RebuildViews();
                 Status = new ProviderStatus
                 {
-                    Provider = "Calendars",
+                    Provider = "Calendarios",
                     IsHealthy = errors.Count == 0,
-                    Message = sources.Count == 0 ? "No calendar sources configured" : errors.Count == 0 ? "Updated " + DateTime.Now.ToString("t") : string.Join(" | ", errors)
+                    Message = sources.Count == 0 ? "No hay fuentes de calendario configuradas" : errors.Count == 0 ? "Actualizado a las " + DateTime.Now.ToString("t") : string.Join(" | ", errors)
                 };
                 AppLog.Info("Calendar refresh completed: sources=" + sources.Count + ", errors=" + errors.Count + ", calendars=" + Calendars.Count + ", visibleEvents=" + Events.Count + ", upcomingEvents=" + UpcomingEvents.Count);
             }
             catch (Exception ex)
             {
                 RebuildViews();
-                Status = new ProviderStatus { Provider = "Calendars", IsHealthy = false, Message = ex.Message };
+                Status = new ProviderStatus { Provider = "Calendarios", IsHealthy = false, Message = ex.Message };
                 AppLog.Error("Calendar refresh", ex);
             }
             finally { Interlocked.Exchange(ref _refreshing, 0); Changed?.Invoke(this, EventArgs.Empty); }

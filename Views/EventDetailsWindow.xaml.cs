@@ -76,19 +76,19 @@ namespace MeetingBar.Windows.Views
         {
             DetailsRows.Children.Clear();
             DetailsRows.RowDefinitions.Clear();
-            AddRow("Date", CalendarEvent.FormatDate(item.Start, _viewModel.TimelineDateFormat));
-            AddRow("Time", item.TimeRange);
-            AddRow("Status", item.IsCurrent ? "Ongoing · " + item.Remaining : item.DetailedCountdown);
-            AddRow("Availability", item.IsBusy ? "Busy" : "Free");
-            if (item.CanRestoreNotifications) AddRow("Notifications", "Muted");
-            if (item.IsDeclined) AddRow("Response", "Declined"); else if (item.IsTentative) AddRow("Response", "Tentative");
-            AddRow("Calendar", item.CalendarName);
-            AddRow("Organizer", item.Organizer);
-            AddRow("Location", item.Location);
-            AddRow("Service", item.MeetingService);
-            AddRow("Meeting link", item.MeetingUrl);
-            if (!string.Equals(item.EventUrl, item.MeetingUrl, StringComparison.OrdinalIgnoreCase)) AddRow("Event link", item.EventUrl);
-            AddRow("Notes", item.DetailsNotes);
+            AddRow("Fecha", CalendarEvent.FormatDate(item.Start, _viewModel.TimelineDateFormat));
+            AddRow("Hora", item.TimeRange);
+            AddRow("Estado", item.IsCurrent ? "En curso · " + item.Remaining : item.DetailedCountdown);
+            AddRow("Disponibilidad", item.IsBusy ? "Ocupado" : "Libre");
+            if (item.CanRestoreNotifications) AddRow("Notificaciones", "Silenciadas");
+            if (item.IsDeclined) AddRow("Respuesta", "Rechazada"); else if (item.IsTentative) AddRow("Respuesta", "Provisional");
+            AddRow("Calendario", item.CalendarName);
+            AddRow("Organizador", item.Organizer);
+            AddRow("Ubicación", item.Location);
+            AddRow("Servicio", item.MeetingService);
+            AddRow("Enlace de reunión", item.MeetingUrl);
+            if (!string.Equals(item.EventUrl, item.MeetingUrl, StringComparison.OrdinalIgnoreCase)) AddRow("Enlace del evento", item.EventUrl);
+            AddRow("Notas", item.DetailsNotes);
         }
 
         private void AddRow(string label, string value)
@@ -103,6 +103,7 @@ namespace MeetingBar.Windows.Views
                 FontSize = 9,
                 FontWeight = FontWeights.SemiBold,
                 Width = 92,
+                TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 10, 9),
                 VerticalAlignment = VerticalAlignment.Top
             };

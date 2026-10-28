@@ -1,3 +1,5 @@
+[Documentación en español](README.es.md)
+
 <div align="center">
 
  <h1> <img src="docs/icon.png" width="200px">

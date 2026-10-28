@@ -24,7 +24,7 @@ namespace MeetingBar.Windows.Services
                 ["Use24HourClock"] = settings.Use24HourClock,
                 ["Events"] = events.OrderBy(x => x.Start).Select(x => new Dictionary<string, object>
                 {
-                    ["Title"] = x.Title ?? "Untitled event", ["Start"] = x.Start.ToString("o"), ["End"] = x.End.ToString("o"),
+                    ["Title"] = x.Title ?? "Evento sin título", ["Start"] = x.Start.ToString("o"), ["End"] = x.End.ToString("o"),
                     ["IsAllDay"] = x.IsAllDay, ["CanJoin"] = x.CanJoin, ["IsDismissed"] = x.IsDismissed, ["Color"] = x.CalendarColor ?? "#6D7CFF"
                 }).ToList()
             };

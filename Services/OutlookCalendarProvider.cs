@@ -20,7 +20,7 @@ namespace MeetingBar.Windows.Services
             var calendars = new List<CalendarInfo>();
             var events = new List<CalendarEvent>();
             var outlookType = Type.GetTypeFromProgID("Outlook.Application");
-            if (outlookType == null) throw new InvalidOperationException("Classic Outlook desktop is not installed. Choose ICS or Google Calendar in Settings.");
+            if (outlookType == null) throw new InvalidOperationException("Outlook clásico no está instalado. Elige ICS o Google Calendar en Configuración.");
             object app = null, session = null, stores = null;
             try
             {
@@ -37,7 +37,7 @@ namespace MeetingBar.Windows.Services
                         root = Invoke(store, "GetRootFolder");
                         ReadFolderTree(root, from, to, calendars, events);
                     }
-                    catch (Exception error) { throw new InvalidOperationException("Could not read an Outlook calendar store. Keeping previous events.", error); }
+                    catch (Exception error) { throw new InvalidOperationException("No se pudo leer una cuenta de Outlook. Se conservan los eventos anteriores.", error); }
                     finally { Release(root); Release(store); }
                 }
             }
@@ -59,7 +59,7 @@ namespace MeetingBar.Windows.Services
                 {
                     object child = null;
                     try { child = GetIndexed(folders, i); ReadFolderTree(child, from, to, calendars, output); }
-                    catch (Exception error) { throw new InvalidOperationException("Could not read an Outlook calendar folder. Keeping previous events.", error); }
+                    catch (Exception error) { throw new InvalidOperationException("No se pudo leer una carpeta de Outlook. Se conservan los eventos anteriores.", error); }
                     finally { Release(child); }
                 }
             }
@@ -69,7 +69,7 @@ namespace MeetingBar.Windows.Services
         private void ReadCalendarFolder(object folder, DateTime from, DateTime to, List<CalendarInfo> calendars, List<CalendarEvent> output)
         {
             var id = SafeString(() => Get(folder, "EntryID")) ?? Guid.NewGuid().ToString("N");
-            var name = SafeString(() => Get(folder, "Name")) ?? "Outlook Calendar";
+            var name = SafeString(() => Get(folder, "Name")) ?? "Calendario de Outlook";
             var color = ColorFor(id);
             calendars.Add(new CalendarInfo { Id = id, Name = name, Source = "Outlook", Color = color });
             object items = null, restricted = null;
@@ -78,7 +78,7 @@ namespace MeetingBar.Windows.Services
                 items = Get(folder, "Items");
                 Invoke(items, "Sort", "[Start]");
                 Set(items, "IncludeRecurrences", true);
-                var filter = "[Start] < '" + to.ToString("g", CultureInfo.CurrentCulture) + "' AND [End] > '" + from.ToString("g", CultureInfo.CurrentCulture) + "'";
+                var filter = "[Start] < '" + to.ToString("g", MeetingBar.Localization.SpanishText.SystemCulture) + "' AND [End] > '" + from.ToString("g", MeetingBar.Localization.SpanishText.SystemCulture) + "'";
                 restricted = Invoke(items, "Restrict", filter);
                 // Count is undefined for some recurring Outlook collections.
                 for (var i = 1; i <= 5001; i++)
@@ -88,7 +88,7 @@ namespace MeetingBar.Windows.Services
                     {
                         item = Invoke(restricted, i == 1 ? "GetFirst" : "GetNext");
                         if (item == null) break;
-                        if (i > 5000) throw new InvalidOperationException("Outlook result limit reached; narrow the calendar selection.");
+                        if (i > 5000) throw new InvalidOperationException("Se alcanzó el límite de eventos de Outlook. Reduce la selección de calendarios.");
                         var start = Convert.ToDateTime(Get(item, "Start"), CultureInfo.InvariantCulture);
                         var end = Convert.ToDateTime(Get(item, "End"), CultureInfo.InvariantCulture);
                         if (start == DateTime.MinValue || end <= from || start >= to) continue;
@@ -100,7 +100,7 @@ namespace MeetingBar.Windows.Services
                         output.Add(new CalendarEvent
                         {
                             Id = OccurrenceId(SafeString(() => Get(item, "GlobalAppointmentID")) ?? SafeString(() => Get(item, "EntryID")) ?? Guid.NewGuid().ToString("N"), start),
-                            Title = SafeString(() => Get(item, "Subject")) ?? "Untitled event", Notes = body, Location = location,
+                            Title = SafeString(() => Get(item, "Subject")) ?? "Evento sin título", Notes = body, Location = location,
                             ConferenceUrl = itemUrl, CalendarId = id, CalendarName = name, CalendarColor = color,
                             Organizer = SafeString(() => Get(item, "Organizer")), Start = start, End = end,
                             IsAllDay = SafeBool(() => Get(item, "AllDayEvent")), IsDeclined = response == 4,
@@ -108,7 +108,7 @@ namespace MeetingBar.Windows.Services
                             IsBusy = busy != 0
                         });
                     }
-                    catch (Exception error) { throw new InvalidOperationException("Could not read an Outlook appointment. Keeping previous events.", error); }
+                    catch (Exception error) { throw new InvalidOperationException("No se pudo leer una cita de Outlook. Se conservan los eventos anteriores.", error); }
                     finally { Release(item); }
                 }
             }
