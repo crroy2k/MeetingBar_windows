@@ -9,3 +9,17 @@ Console.WriteLine("PASS stale settings preserve external changes, user edits and
 var explicitChange = JsonNode.Parse(SettingsStore.MergeChanges(baseline, "{\"TimelineFutureDays\":7,\"AutoJoin\":false,\"WidgetWidth\":500}", current))!;
 if ((int)explicitChange["TimelineFutureDays"]! != 7) throw new Exception("Explicit setting ignored");
 Console.WriteLine("PASS explicit user edits override the old value");
+
+var legacy = new AppSettings { CreateMeetingUrl = "https://tenant.example.org/#/schedule/new" };
+legacy.EnsureMeetingServices();
+if (legacy.MeetingServices!.Count != 1 || legacy.MeetingServices[0].Url != legacy.CreateMeetingUrl) throw new Exception("Service migration lost URL");
+legacy.MeetingServices.Clear(); legacy.EnsureMeetingServices();
+if (legacy.MeetingServices.Count != 0) throw new Exception("Empty services repopulated");
+Console.WriteLine("PASS settings migrate legacy service once and preserve empty lists");
+MeetingBar.Tests.UpdateTests.VersionPolicy();
+MeetingBar.Tests.UpdateTests.MetadataPolicy();
+MeetingBar.Tests.UpdateTests.RedirectPolicy();
+await MeetingBar.Tests.UpdateTests.OnDemandAndBootstrap();
+await MeetingBar.Tests.UpdateTests.DownloadIntegrity();
+await MeetingBar.Tests.UpdateTests.RejectRedirectAndOversize();
+Console.WriteLine("PASS all six update test groups on the Settings net8 runtime");

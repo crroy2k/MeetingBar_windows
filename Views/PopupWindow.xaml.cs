@@ -261,10 +261,12 @@ namespace MeetingBar.Windows.Views
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
             {
+                if ((DataContext as MainViewModel)?.IsCreationMenuOpen == true) return;
                 if (_eventDetails?.IsActive == true || _eventDetails?.IsMouseOver == true) return;
                 if (_isOpen && !_isAnimating && !_isPreloading) HideAnimated();
             }));
         }
+        private void CreateMeeting_Click(object sender, RoutedEventArgs e) => (DataContext as MainViewModel)?.ShowCreationMenu(sender as FrameworkElement);
         private void Settings_Click(object sender, RoutedEventArgs e) { HideAnimated(); _openSettings(); }
     }
 }

@@ -97,7 +97,7 @@ namespace MeetingBar.Windows.ViewModels
             DismissEventCommand = new RelayCommand(x => _sync.DismissEvent(x as CalendarEvent), x => EventWindowPolicy.CanDismiss(x as CalendarEvent, DateTime.Now));
             RestoreEventCommand = new RelayCommand(x => _sync.RestoreEvent(x as CalendarEvent), x => (x as CalendarEvent)?.CanRestoreNotifications == true);
             RefreshCommand = new RelayCommand(async () => await Refresh());
-            CreateMeetingCommand = new RelayCommand(() => _opener.Open(_settings.Current.CreateMeetingUrl));
+            CreateMeetingCommand = new RelayCommand(() => _opener.CreateMeeting());
             OpenCalendarCommand = new RelayCommand(OpenCalendar, () => CanOpenCalendar);
             OpenBookmarkCommand = new RelayCommand(x => _opener.Open((x as Bookmark)?.Url));
             _sync.Changed += SyncChanged;
@@ -105,6 +105,8 @@ namespace MeetingBar.Windows.ViewModels
             _clock.Tick += (s, e) => { _sync.RestoreExpiredDismissals(DateTime.Now); foreach (var item in TimelineEvents) item.RefreshComputed(); RaiseComputed(); };
             _clock.Start(); Rebuild();
         }
+        public bool IsCreationMenuOpen => _opener.IsCreationMenuOpen;
+        public void ShowCreationMenu(FrameworkElement anchor) => _opener.CreateMeeting(anchor);
         public bool CanOpenCalendar => _opener.CanOpenCalendar(NextEvent);
         private void OpenCalendar() => _opener.OpenCalendar(NextEvent);
 

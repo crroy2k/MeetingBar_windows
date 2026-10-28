@@ -36,12 +36,12 @@ namespace MeetingBar.Windows.Services
         private TaskbarWidgetWindow _widget;
         private readonly CancellationTokenSource _ipcCancellation = new CancellationTokenSource();
         private readonly object _settingsStateGate = new object();
-        private readonly UpdateService _updates = new UpdateService();
-        private UpdateWindow _updateWindow;
+
 
         public AppController()
         {
-            _sync = new CalendarSyncService(_settings); _opener = new MeetingOpener(_settings); _main = new MainViewModel(_sync, _settings, _opener);
+            _sync = new CalendarSyncService(_settings); _opener = new MeetingOpener(_settings);
+            _opener.ConfigureMeetingServices += () => OpenSettings("--meetings"); _main = new MainViewModel(_sync, _settings, _opener);
             _trayIcon = CreateTrayIcon(AppAccentColor(), false, System.Drawing.Color.Transparent);
             _tray = new Forms.NotifyIcon { Icon = _trayIcon, Visible = true, Text = "MeetingBar" };
             _tray.MouseClick += (s, e) => { if (e.Button == Forms.MouseButtons.Left) TogglePopup(); };
@@ -98,7 +98,7 @@ namespace MeetingBar.Windows.Services
             switch (normalized)
             {
                 case "join": _opener.Open(_main.NextEvent); break;
-                case "create": _opener.Open(_settings.Current.CreateMeetingUrl); break;
+                case "create": _opener.CreateMeeting(); break;
                 case "calendar": if (_main.OpenCalendarCommand.CanExecute(null)) _main.OpenCalendarCommand.Execute(null); break;
                 case "refresh": _ = _sync.RefreshAsync(); break;
                 case "hide": _popup?.HideAnimated(); break;
@@ -125,15 +125,7 @@ namespace MeetingBar.Windows.Services
             _sync.Schedule(); UpdateTray();
         }
 
-        private void ShowUpdates()
-        {
-            if (_updateWindow != null) { _updateWindow.Activate(); return; }
-            _popup?.HideAnimated();
-            _updateWindow = new UpdateWindow(_updates);
-            _updateWindow.Closed += (s, e) => _updateWindow = null;
-            _updateWindow.Show();
-        }
-
+        private void ShowUpdates() => OpenSettings("--updates");
 
         private void CreateWidget()
         {
@@ -174,7 +166,7 @@ namespace MeetingBar.Windows.Services
         {
             if (_popup == null)
             {
-                _popup = new PopupWindow(_main, OpenSettings);
+                _popup = new PopupWindow(_main, () => OpenSettings());
                 _popup.Preload();
             }
             PositionPopup(_popup); _popup.ShowAnimated();
@@ -195,7 +187,7 @@ namespace MeetingBar.Windows.Services
             else { popup.Left = work.Right - popup.Width - 10; popup.Top = work.Bottom - popup.Height - 10; }
         }
 
-        private void OpenSettings()
+        private void OpenSettings(string arguments = "")
         {
             WriteSettingsState();
             var executable = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Settings", "MeetingBar.Settings.exe");
@@ -215,7 +207,7 @@ namespace MeetingBar.Windows.Services
                 existing.Dispose();
                 return;
             }
-            Process.Start(new ProcessStartInfo(executable) { WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory, UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(executable, arguments) { WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory, UseShellExecute = true });
         }
 
         private async Task ReloadSettings()
@@ -405,7 +397,7 @@ namespace MeetingBar.Windows.Services
 
         public void Dispose()
         {
-            _updates.Dispose();
+
             _ipcCancellation.Cancel(); _positionTimer.Stop(); NativeMethods.UnregisterHotKey(_messageWindow.Handle, 1); _messageWindow.Dispose(); _notifications.Dispose(); _main.Dispose(); _sync.Dispose(); _tray.Visible = false; _tray.Dispose(); _trayIcon.Dispose(); _ipcCancellation.Dispose();
         }
     }

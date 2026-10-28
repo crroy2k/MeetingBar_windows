@@ -19,6 +19,7 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<string, CalendarSourceEditor> _calendarSourceEditors = new();
     private readonly Dictionary<string, InfoBar> _googleStatuses = new();
     private readonly List<(TextBox Name, TextBox Url)> _bookmarkEditors = new();
+    private readonly List<(TextBox Name, TextBox Url)> _serviceEditors = new();
     private AppSettings _settings = SettingsStore.Load();
     private string _page = "";
     private string _stateSignature = "";
@@ -27,7 +28,7 @@ public sealed partial class MainWindow : Window
     private ComboBox? _widgetMode, _titleMode, _timeMode, _endOfDayBehavior, _highlightStyle, _timelineDateFormat, _mapProvider;
     private Slider? _widgetWidth;
     private NumberBox? _offsetX, _offsetY, _titleLength, _highlightBefore, _highlightAfter, _refreshMinutes, _autoJoinBefore, _pastMeetingHours, _futureMeetingHours, _timelinePastDays, _timelineFutureDays;
-    private TextBox? _widgetColor, _endOfDayCustomMessage, _googleClientId, _browserPath, _browserArgs, _createUrl, _debugTitle, _debugColor;
+    private TextBox? _widgetColor, _endOfDayCustomMessage, _googleClientId, _browserPath, _browserArgs, _debugTitle, _debugColor;
     private PasswordBox? _googleClientSecret;
     private ToggleSwitch? _autoWidgetColor, _ongoingTime, _showIcon, _winWWidget, _highlightMeetings, _highlightWholeMeeting, _allDay, _widgetAllDay, _declined, _tentative, _free, _ignoreFreeTaskbar, _requireLink, _includePastDay, _includeNextDay, _fullDayEventList, _use24HourClock, _showTimelineDate;
     private ToggleSwitch? _notify, _fullScreen, _notifyEnd, _autoJoin, _hotkey, _startWithWindows;
@@ -62,13 +63,13 @@ public sealed partial class MainWindow : Window
         ShowPage("Widget");
         Navigation.Loaded += (_, _) => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
         {
-            Navigation.SelectedItem = WidgetItem;
+            Navigation.SelectedItem = Environment.GetCommandLineArgs().Contains("--updates") ? GeneralItem : Environment.GetCommandLineArgs().Contains("--meetings") ? MeetingsItem : WidgetItem;
             _page = "";
-            ShowPage("Widget");
+            ShowPage(Environment.GetCommandLineArgs().Contains("--updates") ? "General" : Environment.GetCommandLineArgs().Contains("--meetings") ? "Meetings" : "Widget");
         });
         _stateTimer.Tick += StateTimer_Tick;
         _stateTimer.Start();
-        Closed += (_, _) => _stateTimer.Stop();
+        Closed += (_, _) => { _stateTimer.Stop(); DisposeUpdates(); };
     }
 
     private void ConfigureWindow()
@@ -105,7 +106,7 @@ public sealed partial class MainWindow : Window
     private void ShowPage(string page)
     {
         if (_page == page && PagePanel.Children.Count > 0) return;
-        CaptureCurrentPage();
+        if (!TryCaptureCurrentPage()) return;
         _page = page;
         PagePanel.Children.Clear();
         PageScroller.ChangeView(null, 0, null, true);
@@ -238,7 +239,7 @@ public sealed partial class MainWindow : Window
         _autoWidgetColor = Toggle(_settings.UseAutomaticWidgetColor);
         AddCard("Usar el color de la barra de Windows", "Se adapta al tema claro u oscuro y al color de la barra de tareas.", _autoWidgetColor);
         _widgetColor = TextEntry(_settings.WidgetBackgroundColor, 170);
-        AddCard("Color personalizado del widget", "Se usa cuando el color automático está desactivado. Introduce un valor #RRGGBB.", _widgetColor);
+        AddCard("Color personalizado del widget", "Se usa cuando el color automático está desactivado. Pulsa la muestra para elegir un color o escribe su código hexadecimal.", ColorEditor(_widgetColor));
 
         AddSection("Pantalla completa");
         _hideWidgetInFullscreen = Toggle(_settings.HideWidgetInFullscreen);
@@ -474,13 +475,7 @@ public sealed partial class MainWindow : Window
         _startWithWindows = Toggle(_settings.StartWithWindows);
         AddCard("Iniciar MeetingBar con Windows", "Muestra MeetingBar en la bandeja y la barra de tareas al iniciar sesión.", _startWithWindows);
         AddSection("Actualizaciones");
-        var checkUpdates = new Button { Content = "Actualizar…" };
-        checkUpdates.Click += async (_, _) =>
-        {
-            try { await SettingsStore.SendCommandAsync("check-updates"); }
-            catch { SaveStatus.Severity = InfoBarSeverity.Error; SaveStatus.Message = "No se pudo contactar con MeetingBar. Comprueba que la aplicación esté abierta."; SaveStatus.IsOpen = true; }
-        };
-        AddCard("Actualizar MeetingBar", "Versión instalada: " + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + ". Comprueba GitHub (Latest) solo al pulsar este botón.", checkUpdates);
+        BuildUpdatesCard();
         AddSection("Privacidad");
         AddCard("Datos del calendario en este equipo", "Los tokens de Google se cifran para el usuario de Windows que ha iniciado sesión.");
         AddCard("Diagnóstico", "Los registros de diagnóstico se guardan en este equipo y no incluyen los títulos ni los enlaces de las reuniones.");
@@ -551,7 +546,7 @@ public sealed partial class MainWindow : Window
         AddSection("Apertura de enlaces");
         _browserPath = TextEntry(_settings.PreferredBrowserPath); AddCard("Navegador preferido", "Ruta del ejecutable. Déjala vacía para usar el navegador predeterminado de Windows.", _browserPath);
         _browserArgs = TextEntry(_settings.PreferredBrowserArguments); AddCard("Argumentos del navegador", "Usa {url} donde deba insertarse el enlace de reunión.", _browserArgs);
-        _createUrl = TextEntry(_settings.CreateMeetingUrl); AddCard("Enlace para crear reuniones", "Se abre al pulsar «Crear reunión».", _createUrl);
+        BuildMeetingServices();
         _mapProvider = Choice(new[] { "Google Maps", "Bing Maps", "OpenStreetMap" }, Math.Max(0, Array.IndexOf(new[] { "Google Maps", "Bing Maps", "OpenStreetMap" }, _settings.MapProvider)));
         AddCard("Servicio de mapas", "Se usa para abrir la ubicación desde los detalles del evento.", _mapProvider);
 
@@ -578,7 +573,7 @@ public sealed partial class MainWindow : Window
 
     private void AddBookmark_Click(object sender, RoutedEventArgs e)
     {
-        CaptureCurrentPage();
+        if (!TryCaptureCurrentPage()) return;
         _settings.Bookmarks.Add(new Bookmark { Name = "Nueva reunión", Url = "https://" });
         _page = "";
         ShowPage("Meetings");
@@ -587,7 +582,7 @@ public sealed partial class MainWindow : Window
     private void RemoveBookmark_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button button || button.Tag is not Bookmark bookmark) return;
-        CaptureCurrentPage();
+        if (!TryCaptureCurrentPage()) return;
         _settings.Bookmarks.Remove(bookmark);
         _page = "";
         ShowPage("Meetings");
@@ -733,7 +728,7 @@ public sealed partial class MainWindow : Window
 
     private async void ConnectGoogle_Click(object sender, RoutedEventArgs e)
     {
-        CaptureCurrentPage();
+        if (!TryCaptureCurrentPage()) return;
         if (sender is not Button { Tag: string sourceId }) return;
         if (string.IsNullOrWhiteSpace(_settings.GoogleClientId) || !_settings.GoogleClientId.EndsWith(".apps.googleusercontent.com", StringComparison.OrdinalIgnoreCase))
         {
@@ -754,7 +749,7 @@ public sealed partial class MainWindow : Window
 
     private async void DisconnectGoogle_Click(object sender, RoutedEventArgs e)
     {
-        CaptureCurrentPage();
+        if (!TryCaptureCurrentPage()) return;
         if (sender is not Button { Tag: string sourceId }) return;
         var source = _settings.CalendarSources.FirstOrDefault(x => x.Id == sourceId);
         if (source == null) return;
@@ -772,7 +767,7 @@ public sealed partial class MainWindow : Window
 
     private void AddCalendarSource(CalendarProviderKind provider)
     {
-        CaptureCurrentPage();
+        if (!TryCaptureCurrentPage()) return;
         if (provider == CalendarProviderKind.Outlook && _settings.CalendarSources.Any(x => x.Provider == provider)) return;
         _settings.CalendarSources.Add(CalendarSourceSettings.Create(provider));
         _page = "";
@@ -782,7 +777,7 @@ public sealed partial class MainWindow : Window
     private void RemoveCalendarSource_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string sourceId }) return;
-        CaptureCurrentPage();
+        if (!TryCaptureCurrentPage()) return;
         _settings.CalendarSources.RemoveAll(x => x.Id == sourceId);
         _page = "";
         ShowPage("Calendars");
@@ -792,10 +787,10 @@ public sealed partial class MainWindow : Window
 
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
     {
-        CaptureCurrentPage();
         var widgetRegistrationCompleted = false;
         try
         {
+            if (!TryCaptureCurrentPage()) return;
             SettingsStore.Save(_settings);
             var widgetStatus = await WinWWidgetRegistration.ApplyAsync(_settings.EnableWinWWidget);
             widgetRegistrationCompleted = true;
@@ -822,6 +817,16 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private bool TryCaptureCurrentPage()
+    {
+        try { CaptureCurrentPage(); return true; }
+        catch (Exception error)
+        {
+            SaveStatus.Message = error.Message; SaveStatus.Severity = InfoBarSeverity.Error; SaveStatus.IsOpen = true;
+            return false;
+        }
+    }
+
     private void CaptureCurrentPage()
     {
         switch (_page)
@@ -834,7 +839,7 @@ public sealed partial class MainWindow : Window
                 if (_offsetY != null) _settings.WidgetOffsetY = Finite(_offsetY.Value, 0);
                 if (_hideWidgetInFullscreen != null) _settings.HideWidgetInFullscreen = _hideWidgetInFullscreen.IsOn;
                 if (_autoWidgetColor != null) _settings.UseAutomaticWidgetColor = _autoWidgetColor.IsOn;
-                if (_widgetColor != null) _settings.WidgetBackgroundColor = _widgetColor.Text.Trim();
+                if (_widgetColor != null) _settings.WidgetBackgroundColor = NormalizeWidgetColor(_widgetColor.Text);
                 if (_titleMode != null) _settings.TitleMode = (TitleMode)Math.Max(0, _titleMode.SelectedIndex);
                 if (_timeMode != null) _settings.TimeMode = (TimeMode)Math.Max(0, _timeMode.SelectedIndex);
                 if (_ongoingTime != null) _settings.ShowOngoingTimeRemaining = _ongoingTime.IsOn;
@@ -892,7 +897,7 @@ public sealed partial class MainWindow : Window
             case "Meetings":
                 if (_browserPath != null) _settings.PreferredBrowserPath = _browserPath.Text.Trim();
                 if (_browserArgs != null) _settings.PreferredBrowserArguments = _browserArgs.Text;
-                if (_createUrl != null) _settings.CreateMeetingUrl = _createUrl.Text.Trim();
+                _settings.MeetingServices = ReadMeetingServices();
                 if (_mapProvider?.SelectedItem is string mapProvider) _settings.MapProvider = mapProvider;
                 _settings.Bookmarks = _bookmarkEditors.Select(x => new Bookmark { Name = x.Name.Text.Trim(), Url = x.Url.Text.Trim() })
                     .Where(x => !string.IsNullOrWhiteSpace(x.Name) && Uri.IsWellFormedUriString(x.Url, UriKind.Absolute)).ToList();

@@ -74,7 +74,7 @@
       <Grid Grid.Row="3" Margin="0,13,0,0">
         <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel Orientation="Horizontal">
-          <Button Command="{Binding CreateMeetingCommand}"><StackPanel Orientation="Horizontal"><views:LucideIcon Kind="Plus" Stroke="{StaticResource InkBrush}" Width="14" Height="14" Margin="0,0,6,0"/><TextBlock Text="Crear reunión"/></StackPanel></Button>
+          <Button Click="CreateMeeting_Click"><StackPanel Orientation="Horizontal"><views:LucideIcon Kind="Plus" Stroke="{StaticResource InkBrush}" Width="14" Height="14" Margin="0,0,6,0"/><TextBlock Text="Crear reunión"/></StackPanel></Button>
           <Button Command="{Binding OpenCalendarCommand}" IsEnabled="{Binding CanOpenCalendar}" Margin="8,0,0,0"><StackPanel Orientation="Horizontal"><views:LucideIcon Kind="CalendarDays" Stroke="{StaticResource InkBrush}" Width="14" Height="14" Margin="0,0,6,0"/><TextBlock Text="Abrir calendario"/></StackPanel></Button>
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal">

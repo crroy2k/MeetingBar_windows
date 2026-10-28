@@ -2,9 +2,9 @@
 
 MeetingBar muestra la reunión actual o siguiente en la bandeja del sistema y junto a la barra de tareas. Permite consultar la agenda, recibir recordatorios y abrir los enlaces de reunión.
 
-## Versión 0.1.0.7
+## Versión 0.1.0.8
 
-En Configuración → General, pulsa **Actualizar…** para consultar la versión marcada como **Latest** en GitHub. No se realizan comprobaciones automáticas al iniciar ni en segundo plano. La app muestra la versión instalada en pequeño, informa si hay una posterior y permite descargar e instalarla con confirmación.
+En Configuración → General, pulsa **Buscar actualizaciones** para consultar la versión marcada como **Latest** en GitHub. No se realizan comprobaciones automáticas al iniciar ni en segundo plano. La búsqueda, el resultado y el progreso se muestran en General, sin abrir otra ventana. La app muestra la versión instalada en pequeño, informa si hay una posterior y permite descargar e instalarla con confirmación.
 
 La descarga verifica el repositorio de origen, el tamaño, el SHA-256 y la versión del instalador antes de ejecutarlo. Requiere acceso a GitHub por HTTPS; si no hay conexión, puedes seguir usando Outlook y consultar de nuevo más tarde. La integridad se contrasta con los metadatos publicados en GitHub y no constituye una firma digital independiente.
 
@@ -27,7 +27,9 @@ Para la versión portátil, extrae todo el paquete y abre `MeetingBar.exe`. Mant
 
 - Pulsa el widget o el icono de la bandeja para abrir la agenda.
 - «Unirse a la reunión» abre el enlace de la cita actual o siguiente.
-- «Crear reunión» abre el enlace configurado para crear una reunión.
+- En Configuración → Reuniones → Agregar servicio, guarda los nombres y URLs HTTPS de tus servicios (3CX, Zoom u otros). Puedes editarlos o quitarlos después de instalar; no hay servicios ni direcciones empresariales predefinidos.
+- «Crear reunión» muestra esos servicios y abre la URL elegida. El enlace de versiones anteriores se conserva como «Servicio existente»; puedes renombrarlo. No envía invitaciones por sí solo.
+- El color personalizado del widget tiene una muestra y un selector visual, además del campo hexadecimal.
 - «Abrir calendario» abre el calendario de la fuente correspondiente. Con Outlook, abre Outlook clásico.
 - El botón de flecha circular actualiza los calendarios. El botón de ajustes abre Configuración.
 - En Configuración, pulsa «Guardar» para aplicar los cambios sin cerrar la ventana.

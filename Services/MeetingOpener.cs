@@ -23,6 +23,39 @@ namespace MeetingBar.Windows.Services
             else Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
 
+        public bool IsCreationMenuOpen { get; private set; }
+        public void CreateMeeting(System.Windows.FrameworkElement anchor = null)
+        {
+            var menu = new System.Windows.Controls.ContextMenu();
+            foreach (var service in _settings.Current.MeetingServices ?? new System.Collections.Generic.List<Bookmark>())
+            {
+                if (service == null || string.IsNullOrWhiteSpace(service.Name)) continue;
+                var entry = new System.Windows.Controls.MenuItem { Header = service.Name, ToolTip = service.Url };
+                entry.Click += (s, e) => {
+                    try {
+                        if (!IsCreationUrl(service.Url)) throw new InvalidOperationException("Configura una URL HTTPS válida para este servicio en Ajustes → Reuniones.");
+                        Open(service.Url);
+                    }
+                    catch (Exception error) { System.Windows.MessageBox.Show(error.Message, "Crear reunión"); }
+                };
+                menu.Items.Add(entry);
+            }
+            menu.Items.Add(new System.Windows.Controls.Separator());
+            var configure = new System.Windows.Controls.MenuItem { Header = "Configurar servicios…" };
+            configure.Click += (s, e) => ConfigureMeetingServices?.Invoke();
+            menu.Items.Add(configure);
+            menu.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(40, 40, 40));
+            menu.Foreground = System.Windows.Media.Brushes.White;
+            menu.PlacementTarget = anchor;
+            menu.Placement = anchor == null ? System.Windows.Controls.Primitives.PlacementMode.MousePoint : System.Windows.Controls.Primitives.PlacementMode.Top;
+            menu.Closed += (s, e) => IsCreationMenuOpen = false;
+            IsCreationMenuOpen = true;
+            menu.IsOpen = true;
+        }
+        public event Action ConfigureMeetingServices;
+        internal static bool IsCreationUrl(string url) => Uri.IsWellFormedUriString(url, UriKind.Absolute) && Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            && uri.Scheme == Uri.UriSchemeHttps && string.IsNullOrEmpty(uri.UserInfo) && !string.IsNullOrWhiteSpace(uri.Host);
+
         public void Open(CalendarEvent item) => Open(item?.MeetingUrl);
 
         internal static CalendarProviderKind CalendarProviderFor(AppSettings settings, CalendarEvent item)

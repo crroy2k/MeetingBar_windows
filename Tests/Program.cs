@@ -16,6 +16,28 @@ namespace MeetingBar.Tests
             if (args.Length > 0 && args[0] == "--render-widget") { RenderWidget(args[1]); return; }
             if (args.Length > 0 && args[0] == "--render-fallback") { RenderWidget(args[1], true); return; }
             if (args.Length > 0 && args[0] == "--render-agenda") { RenderAgenda(args[1]); return; }
+            Test("meeting services migrate a legacy URL once and allow removing all services", () =>
+            {
+                var settings = new AppSettings { CreateMeetingUrl = "https://calendar.example.org/schedule#new" };
+                settings.EnsureMeetingServices();
+                Equal(1, settings.MeetingServices.Count);
+                Equal(settings.CreateMeetingUrl, settings.MeetingServices[0].Url);
+                settings.MeetingServices.Clear(); settings.EnsureMeetingServices();
+                Equal(0, settings.MeetingServices.Count);
+                var fresh = new AppSettings(); fresh.EnsureMeetingServices(); Equal(0, fresh.MeetingServices.Count);
+                var json = new System.Web.Script.Serialization.JavaScriptSerializer();
+                var restored = json.Deserialize<AppSettings>(json.Serialize(settings)); restored.EnsureMeetingServices();
+                Equal(0, restored.MeetingServices.Count);
+            });
+            Test("creation URLs accept corporate HTTPS fragments and reject unsafe schemes and credentials", () =>
+            {
+                Equal(true, MeetingOpener.IsCreationUrl("https://tenant.example.org/#/conferences/schedule/new"));
+                Equal(false, MeetingOpener.IsCreationUrl("http://tenant.example.org/new"));
+                Equal(false, MeetingOpener.IsCreationUrl("https://user:password@example.org/new"));
+                Equal(false, MeetingOpener.IsCreationUrl("file:///C:/Windows/System32/cmd.exe"));
+                Equal(false, MeetingOpener.IsCreationUrl("javascript:alert(1)"));
+                Equal(false, MeetingOpener.IsCreationUrl(null));
+            });
             Test("update versions compare numerically and reject prerelease tags", UpdateTests.VersionPolicy);
             Test("update metadata requires this repo installer and SHA-256", UpdateTests.MetadataPolicy);
             Test("update redirects reject foreign hosts credentials and HTTP", UpdateTests.RedirectPolicy);

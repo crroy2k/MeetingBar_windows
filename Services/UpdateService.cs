@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,7 +13,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+#if !NET8_0_OR_GREATER
 using System.Web.Script.Serialization;
+#endif
 
 namespace MeetingBar.Windows.Services
 {
@@ -27,6 +30,18 @@ namespace MeetingBar.Windows.Services
         public string Sha256 { get; private set; }
         public long Size { get; private set; }
 
+        #if NET8_0_OR_GREATER
+        private static object ConvertJson(System.Text.Json.JsonElement value) => value.ValueKind switch
+        {
+            System.Text.Json.JsonValueKind.Object => value.EnumerateObject().ToDictionary(x => x.Name, x => ConvertJson(x.Value)),
+            System.Text.Json.JsonValueKind.Array => value.EnumerateArray().Select(ConvertJson).ToArray(),
+            System.Text.Json.JsonValueKind.String => value.GetString(),
+            System.Text.Json.JsonValueKind.Number => value.GetInt64(),
+            System.Text.Json.JsonValueKind.True => true,
+            System.Text.Json.JsonValueKind.False => false,
+            _ => null
+        };
+#endif
         internal static Version ParseVersion(string tag)
         {
             if (!Regex.IsMatch(tag ?? "", @"^v?\d{1,5}\.\d{1,5}\.\d{1,5}(?:\.\d{1,5})?$", RegexOptions.CultureInvariant))
@@ -37,7 +52,12 @@ namespace MeetingBar.Windows.Services
 
         internal static UpdateRelease Parse(string json, bool manifest)
         {
+            #if NET8_0_OR_GREATER
+            using var document = System.Text.Json.JsonDocument.Parse(json);
+            var root = ConvertJson(document.RootElement) as Dictionary<string, object>;
+#else
             var root = new JavaScriptSerializer { MaxJsonLength = 256 * 1024 }.Deserialize<Dictionary<string, object>>(json);
+#endif
             if (root == null) throw new InvalidDataException("La información de actualización está vacía.");
             string Text(Dictionary<string, object> obj, string key) => obj.ContainsKey(key) ? Convert.ToString(obj[key]) : null;
             if (!manifest && (root.ContainsKey("draft") && Convert.ToBoolean(root["draft"]) || root.ContainsKey("prerelease") && Convert.ToBoolean(root["prerelease"])))
@@ -166,14 +186,14 @@ namespace MeetingBar.Windows.Services
                 throw new InvalidDataException("El ejecutable descargado no corresponde a MeetingBar o a la versión publicada.");
         }
 
-        public void Install(string path, UpdateRelease release)
+        public void Install(string path, UpdateRelease release, string installationDirectory = null)
         {
             // Revalidate after the user confirms, not just when the download finishes.
             var root = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MeetingBar", "Updates")) + Path.DirectorySeparatorChar;
             if (!Path.GetFullPath(path).StartsWith(root, StringComparison.OrdinalIgnoreCase) || release.Version <= InstalledVersion)
                 throw new InvalidOperationException("El instalador no pertenece a la carpeta de actualizaciones.");
             VerifyHash(path, release.Sha256); ValidateExecutable(path, release.Version);
-            var arguments = "/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /OTA=1 /DIR=\"" + AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar) + "\"";
+            var arguments = "/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /OTA=1 /DIR=\"" + (installationDirectory ?? AppDomain.CurrentDomain.BaseDirectory).TrimEnd(Path.DirectorySeparatorChar) + "\"";
             var process = Process.Start(new ProcessStartInfo(path, arguments) { UseShellExecute = true });
             if (process == null) throw new InvalidOperationException("No se pudo iniciar el instalador.");
             process.Dispose();

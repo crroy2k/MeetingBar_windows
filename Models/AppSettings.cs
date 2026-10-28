@@ -110,14 +110,24 @@ namespace MeetingBar.Windows.Models
         public List<string> CustomMeetingRegexes { get; set; } = new List<string>();
         public List<string> DismissedEventIds { get; set; } = new List<string>();
         public List<Bookmark> Bookmarks { get; set; } = new List<Bookmark>();
-        public string CreateMeetingUrl { get; set; } = "https://meet.google.com/new";
+        public string CreateMeetingUrl { get; set; } = "";
+        // Null migrates the old single URL once; an empty list deliberately stays empty.
+        public List<Bookmark> MeetingServices { get; set; }
+        public void EnsureMeetingServices()
+        {
+            if (MeetingServices != null) return;
+            MeetingServices = new List<Bookmark>();
+            if (!string.IsNullOrWhiteSpace(CreateMeetingUrl))
+                MeetingServices.Add(new Bookmark { Name = "Servicio existente", Url = CreateMeetingUrl });
+        }
         public string PreferredBrowserPath { get; set; } = "";
         public string PreferredBrowserArguments { get; set; } = "";
         public string MapProvider { get; set; } = "Google Maps";
 
         public bool EnsureCalendarSources()
         {
-            var changed = false;
+            var changed = MeetingServices == null;
+            EnsureMeetingServices();
             if (CalendarSources == null) { CalendarSources = new List<CalendarSourceSettings>(); changed = true; }
             if (CalendarSourcesVersion < 1)
             {

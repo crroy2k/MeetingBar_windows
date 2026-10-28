@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,13 +8,23 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+#if !NET8_0_OR_GREATER
 using System.Web.Script.Serialization;
+#endif
 using MeetingBar.Windows.Services;
 
 namespace MeetingBar.Tests
 {
     internal static class UpdateTests
     {
+        private static string Serialize(object value)
+        {
+#if NET8_0_OR_GREATER
+            return System.Text.Json.JsonSerializer.Serialize(value);
+#else
+            return new JavaScriptSerializer().Serialize(value);
+#endif
+        }
         private const string Tag = "v99.1.0.0";
         private static readonly byte[] Payload = Encoding.UTF8.GetBytes("test installer bytes");
         private static string Hash(byte[] bytes) { using (var sha = SHA256.Create()) return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant(); }
@@ -21,7 +32,7 @@ namespace MeetingBar.Tests
         private static void Reject(Action action) { try { action(); } catch (InvalidDataException) { return; } throw new Exception("Unsafe update accepted"); }
         private static string Manifest(string tag = Tag, string digest = null, string url = null, long size = -1)
         {
-            return new JavaScriptSerializer().Serialize(new Dictionary<string, object> {
+            return Serialize(new Dictionary<string, object> {
                 ["schema_version"] = 1, ["tag_name"] = tag, ["body"] = "<script>untrusted notes</script>",
                 ["browser_download_url"] = url ?? UpdateRelease.RepositoryUrl + "/releases/download/" + tag + "/MeetingBar-Windows-v" + tag.TrimStart('v') + "-Setup.exe",
                 ["digest"] = digest ?? "sha256:" + Hash(Payload), ["size"] = size == -1 ? Payload.Length : size });
@@ -67,7 +78,7 @@ namespace MeetingBar.Tests
                 Assert(handler.Requests == 0); // Creating the service never checks GitHub.
                 Assert((await service.CheckAsync(CancellationToken.None)).Tag == Tag && handler.Requests == 1);
             }
-            var api = new JavaScriptSerializer().Serialize(new Dictionary<string, object> {
+            var api = Serialize(new Dictionary<string, object> {
                 ["tag_name"] = Tag, ["draft"] = false, ["prerelease"] = false,
                 ["assets"] = new[] { new Dictionary<string, object> { ["name"] = "MeetingBar-Windows-" + Tag + "-Setup.exe",
                     ["browser_download_url"] = UpdateRelease.RepositoryUrl + "/releases/download/" + Tag + "/MeetingBar-Windows-" + Tag + "-Setup.exe",

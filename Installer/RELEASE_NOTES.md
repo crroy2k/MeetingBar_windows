@@ -1,4 +1,23 @@
-# Versión 0.1.0.7 — Actualizaciones bajo demanda
+# Versión 0.1.0.8 — Servicios configurables y ajustes integrados
+
+- «Buscar actualizaciones» comprueba GitHub y muestra el resultado en Configuración → General. La descarga, el progreso y la confirmación de instalación permanecen en esa misma ventana.
+- Las comprobaciones siguen siendo exclusivamente manuales. No se busca ni descarga al iniciar o en segundo plano.
+- «Crear reunión» muestra un menú con los servicios que configures en Configuración → Reuniones. Puedes agregar, editar y quitar nombres y URLs HTTPS después de instalar; no hay direcciones empresariales fijadas en el código.
+- El enlace único de versiones anteriores se conserva como «Servicio existente», que puedes renombrar. Una instalación nueva empieza sin servicios predefinidos.
+- El color personalizado del widget incluye una muestra y un selector visual; también permite introducir el hexadecimal y previsualizarlo.
+- Se conserva la integración con Outlook clásico, los calendarios y los ajustes personales.
+
+## Cómo actualizar
+
+Desde la versión 0.1.0.7, abre Configuración → General → Actualizar… y confirma la descarga e instalación. Después de actualizar, el botón se llama «Buscar actualizaciones» y todo se muestra dentro de General.
+
+Para configurar tus servicios, abre Reuniones → Agregar servicio, escribe un nombre y su URL para programar reuniones, y pulsa Guardar. Elegir un servicio abre esa página en el navegador configurado; no envía invitaciones ni crea citas automáticamente.
+
+El SHA-256 verifica la integridad respecto a los metadatos publicados en GitHub; no sustituye una firma digital independiente. La distribución sigue sin firma Authenticode.
+
+## Historial
+
+### Versión 0.1.0.7 — Actualizaciones bajo demanda
 
 - Nuevo botón «Actualizar…» en Configuración → General.
 - Consulta la versión marcada como Latest en este repositorio únicamente al pulsar el botón. No hay búsquedas ni descargas automáticas.

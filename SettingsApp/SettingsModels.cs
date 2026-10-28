@@ -115,14 +115,25 @@ public sealed class AppSettings
     public List<string> CustomMeetingRegexes { get; set; } = [];
     public List<string> DismissedEventIds { get; set; } = [];
     public List<Bookmark> Bookmarks { get; set; } = [];
-    public string CreateMeetingUrl { get; set; } = "https://meet.google.com/new";
+    public string CreateMeetingUrl { get; set; } = "";
+        // Null migrates the old single URL once; an empty list deliberately stays empty.
+        public List<Bookmark>? MeetingServices { get; set; }
+        public void EnsureMeetingServices()
+        {
+            if (MeetingServices != null) return;
+            MeetingServices = new List<Bookmark>();
+            if (!string.IsNullOrWhiteSpace(CreateMeetingUrl))
+                MeetingServices.Add(new Bookmark { Name = "Servicio existente", Url = CreateMeetingUrl });
+        }
     public string PreferredBrowserPath { get; set; } = "";
     public string PreferredBrowserArguments { get; set; } = "";
     public string MapProvider { get; set; } = "Google Maps";
 
     public bool EnsureCalendarSources()
     {
-        var changed = false;
+            var servicesChanged = MeetingServices == null;
+            EnsureMeetingServices();
+        var changed = servicesChanged;
         CalendarSources ??= [];
         if (CalendarSourcesVersion < 1)
         {
