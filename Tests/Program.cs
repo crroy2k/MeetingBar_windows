@@ -16,6 +16,57 @@ namespace MeetingBar.Tests
             if (args.Length > 0 && args[0] == "--render-widget") { RenderWidget(args[1]); return; }
             if (args.Length > 0 && args[0] == "--render-fallback") { RenderWidget(args[1], true); return; }
             if (args.Length > 0 && args[0] == "--render-agenda") { RenderAgenda(args[1]); return; }
+            Test("scheduled list spans future days and excludes only the featured occurrence", () =>
+            {
+                var now = new DateTime(2026, 10, 28, 10, 0, 0);
+                var primary = new CalendarEvent { Id = "recurring", SourceId = "work", Start = now.AddDays(2), End = now.AddDays(2).AddHours(1) };
+                var duplicate = new CalendarEvent { Id = primary.Id, SourceId = primary.SourceId, Start = primary.Start, End = primary.End };
+                var recurring = new CalendarEvent { Id = primary.Id, SourceId = primary.SourceId, Start = now.AddDays(9), End = now.AddDays(9).AddHours(1) };
+                var concurrent = new CalendarEvent { Id = "parallel", Start = primary.Start, End = primary.End };
+                var otherSource = new CalendarEvent { Id = primary.Id, SourceId = "personal", Start = primary.Start, End = primary.End };
+                var past = new CalendarEvent { Start = now.AddHours(-2), End = now.AddHours(-1) };
+                var earlier = new CalendarEvent { Start = now.AddHours(1), End = now.AddHours(2) };
+                var list = EventWindowPolicy.ScheduledAfter(new[] { recurring, past, primary, earlier, concurrent, duplicate, otherSource }, primary, now);
+                Equal(3, list.Count); Equal(recurring, list.Last());
+                Equal(true, list.Contains(concurrent)); Equal(true, list.Contains(otherSource));
+                Equal(0, EventWindowPolicy.ScheduledAfter(null, primary, now).Count);
+                Equal(1, EventWindowPolicy.ScheduledAfter(new[] { past, earlier }, null, now).Count);
+            });
+            Test("scheduled countdown crosses days hours and minute boundaries", () =>
+            {
+                var now = new DateTime(2026, 10, 28, 10, 0, 0);
+                var item = new CalendarEvent { Start = now.AddDays(2).AddHours(7), End = now.AddDays(2).AddHours(8) };
+                Equal("En 2 d 7 h", EventWindowPolicy.TimeUntilStart(item, now));
+                Equal("En 1 h 1 min", EventWindowPolicy.TimeUntilStart(item, item.Start.AddMinutes(-60.5)));
+                Equal("En 1 h", EventWindowPolicy.TimeUntilStart(item, item.Start.AddMinutes(-60)));
+                Equal("En 5 min", EventWindowPolicy.TimeUntilStart(item, item.Start.AddMinutes(-5)));
+                Equal("En breve", EventWindowPolicy.TimeUntilStart(item, item.Start.AddSeconds(-30)));
+                Equal("En curso", EventWindowPolicy.TimeUntilStart(item, item.Start));
+                Equal("Finalizada", EventWindowPolicy.TimeUntilStart(item, item.End));
+            });
+            Test("scheduled list updates countdowns removes ended events and preserves daily navigation", () =>
+            {
+                var settings = new AppSettings { AutoJoin = false, IncludeNextDay = true, TimelineFutureDays = 1 };
+                var service = (SettingsService)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(SettingsService));
+                typeof(SettingsService).GetField("<Current>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(service, settings);
+                using (var sync = new CalendarSyncService(service))
+                {
+                    var now = DateTime.Now;
+                    var primary = new CalendarEvent { Id = "featured", Start = now.AddDays(2), End = now.AddDays(2).AddHours(1) };
+                    var later = new CalendarEvent { Id = "later", Start = now.AddDays(4), End = now.AddDays(4).AddHours(1) };
+                    var last = new CalendarEvent { Id = "last", Start = now.AddDays(6), End = now.AddDays(6).AddHours(1) };
+                    sync.InjectDebugEvent(primary); sync.InjectDebugEvent(later); sync.InjectDebugEvent(last);
+                    using (var vm = new MeetingBar.Windows.ViewModels.MainViewModel(sync, service, new MeetingOpener(service)))
+                    {
+                        Equal(0, vm.PageEvents.Count); Equal(2, vm.ScheduledEvents.Count); Equal(later, vm.ScheduledEvents[0]);
+                        Equal(true, vm.IsScheduleView); vm.SelectDay(1); Equal(true, vm.IsDayView); vm.SelectDay(0); Equal(true, vm.IsScheduleView);
+                        var notifications = 0; later.PropertyChanged += (_, e) => notifications++;
+                        var changes = 0; vm.ScheduledEvents.CollectionChanged += (_, e) => changes++;
+                        vm.RefreshClock(now); Equal(true, notifications > 0); Equal(0, changes);
+                        vm.RefreshClock(later.End); Equal(0, vm.ScheduledEvents.Count); Equal(true, vm.IsScheduleEmpty);
+                    }
+                }
+            });
             Test("meeting services migrate a legacy URL once and allow removing all services", () =>
             {
                 var settings = new AppSettings { CreateMeetingUrl = "https://calendar.example.org/schedule#new" };
@@ -452,20 +503,24 @@ namespace MeetingBar.Tests
             var today = DateTime.Today;
             sync.InjectDebugEvent(new CalendarEvent { Id = "day", CalendarId = "meetingbar-debug", Title = "Recordatorio anual del equipo", Start = today, End = today.AddDays(1), IsAllDay = true });
             sync.InjectDebugEvent(new CalendarEvent { Id = "timed", CalendarId = "meetingbar-debug", Title = "Revisión del proyecto", Start = DateTime.Now.AddMinutes(30), End = DateTime.Now.AddMinutes(90) });
+            sync.InjectDebugEvent(new CalendarEvent { Id = "scheduled-1", Title = "Seguimiento de operaciones", CalendarSourceName = "Calendario de trabajo", CalendarColor = "#009F81", Start = DateTime.Now.AddDays(2).AddHours(3), End = DateTime.Now.AddDays(2).AddHours(4) });
+            sync.InjectDebugEvent(new CalendarEvent { Id = "scheduled-2", Title = "Planificación del equipo y revisión de pendientes", CalendarSourceName = "Calendario de trabajo", CalendarColor = "#0078D4", Start = DateTime.Now.AddDays(4).AddHours(1), End = DateTime.Now.AddDays(4).AddHours(2) });
+            sync.InjectDebugEvent(new CalendarEvent { Id = "scheduled-3", Title = "Revisión mensual", CalendarSourceName = "Calendario de trabajo", CalendarColor = "#9B78FF", Start = DateTime.Now.AddDays(10), End = DateTime.Now.AddDays(10).AddHours(1) });
             var vm = new MeetingBar.Windows.ViewModels.MainViewModel(sync, service, new MeetingOpener(service));
+            Equal(3, vm.ScheduledEvents.Count);
             typeof(MeetingBar.Windows.ViewModels.MainViewModel).GetField("_isInitialLoading", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(vm, false);
             Equal(2, vm.PageEvents.Count);
             Equal("TODO EL DÍA · FERIADOS Y RECORDATORIOS", vm.PageEvents[0].AgendaSectionHeader);
             Equal("CITAS CON HORA", vm.PageEvents[1].AgendaSectionHeader);
             Equal("timed", vm.WidgetEvent.Id);
-            var window = new PopupWindow(vm, () => { }); window.ShowActivated = false; window.Show();
+            var window = new PopupWindow(vm, () => { }); window.ShowActivated = false; window.Left = System.Windows.SystemParameters.VirtualScreenLeft - 1000; window.Top = System.Windows.SystemParameters.VirtualScreenTop; window.Show();
             window.Measure(new System.Windows.Size(window.Width, window.Height)); window.Arrange(new System.Windows.Rect(0, 0, window.Width, window.Height)); window.UpdateLayout();
             var image = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.Width, (int)window.Height, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
             image.Render(window);
             var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(image));
             using (var output = System.IO.File.Create(path)) encoder.Save(output);
             vm.Dispose(); sync.Dispose(); window.Close();
-            Console.WriteLine("PASS agenda visually separates all-day reminders and timed appointments");
+            Console.WriteLine("PASS agenda renders scheduled future events under the unchanged featured card and preserves daily grouping");
         }
 
         private static void Test(string name, Action action) { try { action(); Console.WriteLine("PASS " + name); } catch (Exception ex) { _failed++; Console.WriteLine("FAIL " + name + ": " + ex.Message); } }

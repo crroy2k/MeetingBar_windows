@@ -1,4 +1,18 @@
-# Versión 0.1.0.8 — Servicios configurables y ajustes integrados
+# Versión 0.1.0.9 — Eventos programados en la agenda
+
+- La vista inicial mantiene la tarjeta de la próxima cita y agrega debajo «Programados», con una separación sutil.
+- Muestra los eventos posteriores en orden cronológico, sin repetir la cita principal. Cada fila incluye título, fecha y hora, calendario y contador del tiempo restante.
+- La lista se actualiza con la sincronización habitual del calendario. Los contadores se refrescan con el reloj de la aplicación, sin consultas adicionales a Outlook.
+- Los eventos finalizados desaparecen de la lista y, al avanzar la próxima cita, se actualizan los eventos que aparecen debajo.
+- Conserva la navegación por días desde la línea de tiempo, los filtros de calendario, los servicios configurables y las actualizaciones exclusivamente manuales.
+
+## Cómo actualizar
+
+En Configuración → General → Buscar actualizaciones, descarga y confirma la nueva versión. Se conservan los calendarios y tus ajustes.
+
+## Historial
+
+### Versión 0.1.0.8 — Servicios configurables y ajustes integrados
 
 - «Buscar actualizaciones» comprueba GitHub y muestra el resultado en Configuración → General. La descarga, el progreso y la confirmación de instalación permanecen en esa misma ventana.
 - Las comprobaciones siguen siendo exclusivamente manuales. No se busca ni descarga al iniciar o en segundo plano.

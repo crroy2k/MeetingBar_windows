@@ -22,6 +22,10 @@ namespace MeetingBar.Windows.ViewModels
         private int _selectedDayOffset;
         public string VersionLabel => "v" + UpdateService.InstalledVersion;
         public ObservableCollection<CalendarEvent> Events { get; } = new ObservableCollection<CalendarEvent>();
+        public ObservableCollection<CalendarEvent> ScheduledEvents { get; } = new ObservableCollection<CalendarEvent>();
+        public bool IsScheduleView => _selectedDayOffset == 0;
+        public bool IsDayView => !IsScheduleView;
+        public bool IsScheduleEmpty => ScheduledEvents.Count == 0;
         public ObservableCollection<CalendarEvent> PageEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<CalendarEvent> TimelineEvents { get; } = new ObservableCollection<CalendarEvent>();
         public ObservableCollection<Bookmark> Bookmarks { get; } = new ObservableCollection<Bookmark>();
@@ -102,7 +106,7 @@ namespace MeetingBar.Windows.ViewModels
             OpenBookmarkCommand = new RelayCommand(x => _opener.Open((x as Bookmark)?.Url));
             _sync.Changed += SyncChanged;
             _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
-            _clock.Tick += (s, e) => { _sync.RestoreExpiredDismissals(DateTime.Now); foreach (var item in TimelineEvents) item.RefreshComputed(); RaiseComputed(); };
+            _clock.Tick += (s, e) => RefreshClock(DateTime.Now);
             _clock.Start(); Rebuild();
         }
         public bool IsCreationMenuOpen => _opener.IsCreationMenuOpen;
@@ -122,6 +126,7 @@ namespace MeetingBar.Windows.ViewModels
         {
             Events.Clear(); foreach (var item in _sync.Events) Events.Add(item);
             TimelineEvents.Clear(); foreach (var item in _sync.TimelineEvents) TimelineEvents.Add(item);
+            UpdateScheduledEvents(DateTime.Now);
             SelectDay(_selectedDayOffset);
             Bookmarks.Clear(); foreach (var item in _settings.Current.Bookmarks) Bookmarks.Add(item);
             StatusText = _sync.Status.Message; RaiseComputed();
@@ -143,14 +148,34 @@ namespace MeetingBar.Windows.ViewModels
                 PageEvents.Add(item);
             }
             Raise(nameof(HasEvents));
+            Raise(nameof(IsScheduleView)); Raise(nameof(IsDayView));
         }
+        internal void RefreshClock(DateTime now)
+        {
+            _sync.RestoreExpiredDismissals(now);
+            UpdateScheduledEvents(now);
+            foreach (var item in TimelineEvents.Concat(ScheduledEvents).Concat(new[] { NextEvent }).Where(x => x != null).Distinct()) item.RefreshComputed();
+            RaiseComputed();
+        }
+        private void UpdateScheduledEvents(DateTime now)
+        {
+            var primary = EventWindowPolicy.NextWidgetEvent(_sync.UpcomingEvents, _settings.Current, now);
+            var desired = EventWindowPolicy.ScheduledAfter(_sync.UpcomingEvents, primary, now);
+            if (!ScheduledEvents.SequenceEqual(desired))
+            {
+                ScheduledEvents.Clear();
+                foreach (var item in desired) ScheduledEvents.Add(item);
+            }
+            Raise(nameof(IsScheduleEmpty));
+        }
+
         private string TruncateWidgetTitle(string title)
         {
             var max = Math.Max(5, _settings.Current.TitleMaxLength);
             return title.Length > max ? title.Substring(0, max - 1) + "…" : title;
         }
         private void RaiseComputed() { Raise(nameof(NextAllDayEvent)); Raise(nameof(WidgetSubtitle)); Raise(nameof(HasWidgetSubtitle)); Raise(nameof(NextEvent)); Raise(nameof(TaskbarEvent)); Raise(nameof(WidgetEvent)); Raise(nameof(ShouldShowTaskbarWidget)); Raise(nameof(Header)); Raise(nameof(NextTitle)); Raise(nameof(NextMeta)); Raise(nameof(WidgetTitle)); Raise(nameof(WidgetTime)); Raise(nameof(WidgetIconVisibility)); Raise(nameof(WidgetEventColor)); Raise(nameof(CanJoinNext)); Raise(nameof(CanOpenCalendar)); Raise(nameof(HasEvents)); Raise(nameof(HasBookmarks)); Raise(nameof(TimelinePastHours)); Raise(nameof(TimelineFutureHours)); Raise(nameof(TimelineIncludesPastDay)); Raise(nameof(TimelineIncludesNextDay)); Raise(nameof(TimelinePastDays)); Raise(nameof(TimelineFutureDays)); Raise(nameof(Use24HourClock)); Raise(nameof(ShowTimelineDate)); Raise(nameof(TimelineDateFormat)); Raise(nameof(LoadingVisibility)); }
-        public void RefreshSettings() { RaiseComputed(); }
+        public void RefreshSettings() { UpdateScheduledEvents(DateTime.Now); RaiseComputed(); }
         public void Dispose() { _sync.Changed -= SyncChanged; _clock.Stop(); }
     }
 }

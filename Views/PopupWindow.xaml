@@ -26,9 +26,32 @@
       </Border>
 
       <views:AutoHideScrollViewer x:Name="EventScroller" Grid.Row="2">
-        <StackPanel>
-          <ItemsControl x:Name="EventPage" ItemsSource="{Binding PageEvents}" RenderTransformOrigin="0.5,0.5">
-            <ItemsControl.RenderTransform><TranslateTransform x:Name="EventPageTranslate"/></ItemsControl.RenderTransform>
+        <StackPanel x:Name="EventPage" RenderTransformOrigin="0.5,0.5">
+          <StackPanel.RenderTransform><TranslateTransform x:Name="EventPageTranslate"/></StackPanel.RenderTransform>
+          <StackPanel Visibility="{Binding IsScheduleView, Converter={StaticResource BooleanVisibility}}">
+            <Border Height="1" Background="#33767676" Margin="1,2,1,12"/>
+            <TextBlock Text="PROGRAMADOS" Foreground="{StaticResource MutedBrush}" FontSize="10" FontWeight="SemiBold" Margin="2,0,0,10"/>
+            <TextBlock Text="No hay más eventos programados." Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="2,3,0,12" Visibility="{Binding IsScheduleEmpty, Converter={StaticResource BooleanVisibility}}"/>
+            <ItemsControl ItemsSource="{Binding ScheduledEvents}" AutomationProperties.Name="Eventos programados después de la próxima cita">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border BorderBrush="#19767676" BorderThickness="0,0,0,1" Margin="1,0,1,4" Padding="0,5,0,10">
+                    <Grid Background="Transparent" MouseEnter="EventRow_MouseEnter" MouseLeave="EventRow_MouseLeave" AutomationProperties.Name="{Binding Title}">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="3"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                      <Border Background="{Binding CalendarColor}" CornerRadius="1.5" Margin="0,3,0,2"/>
+                      <StackPanel Grid.Column="1" Margin="10,0,8,0">
+                        <views:EmojiTextBlock EmojiText="{Binding Title}" Style="{StaticResource EmojiText}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding ScheduledWhen}" Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding CalendarDisplayName}" Foreground="{StaticResource MutedBrush}" FontSize="10" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                      </StackPanel>
+                      <TextBlock Grid.Column="2" Text="{Binding ScheduledCountdown}" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+          <ItemsControl ItemsSource="{Binding PageEvents}" Visibility="{Binding IsDayView, Converter={StaticResource BooleanVisibility}}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <StackPanel>

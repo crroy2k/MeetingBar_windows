@@ -87,6 +87,8 @@ namespace MeetingBar.Windows.Models
                 return "En " + Math.Floor(span.TotalDays) + " d";
             }
         }
+        public string ScheduledWhen => MeetingBar.Windows.Services.EventWindowPolicy.WidgetWhen(this, DateTime.Now, Use24HourClock);
+        public string ScheduledCountdown => MeetingBar.Windows.Services.EventWindowPolicy.TimeUntilStart(this, DateTime.Now);
         public string DetailedCountdown
         {
             get

@@ -2,7 +2,11 @@
 
 MeetingBar muestra la reunión actual o siguiente en la bandeja del sistema y junto a la barra de tareas. Permite consultar la agenda, recibir recordatorios y abrir los enlaces de reunión.
 
-## Versión 0.1.0.8
+## Versión 0.1.0.9
+
+La agenda muestra la próxima cita y, debajo de una división sutil, la lista **Programados** con los eventos posteriores. Cada evento incluye su título, fecha y hora, calendario y tiempo restante. La lista sigue la sincronización normal y los contadores se actualizan con el reloj de la aplicación. Al consultar otro día desde la línea de tiempo se conserva la vista por días.
+
+## Actualizaciones
 
 En Configuración → General, pulsa **Buscar actualizaciones** para consultar la versión marcada como **Latest** en GitHub. No se realizan comprobaciones automáticas al iniciar ni en segundo plano. La búsqueda, el resultado y el progreso se muestran en General, sin abrir otra ventana. La app muestra la versión instalada en pequeño, informa si hay una posterior y permite descargar e instalarla con confirmación.
 

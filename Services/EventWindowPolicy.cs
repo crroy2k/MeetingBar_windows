@@ -60,6 +60,29 @@ namespace MeetingBar.Windows.Services
             return next.Start.Date == now.Date || next.Start <= now ? next : null;
         }
 
+        // Use the already-synchronized horizon, independently of the selected day's time window.
+        public static IReadOnlyList<CalendarEvent> ScheduledAfter(IEnumerable<CalendarEvent> events, CalendarEvent primary, DateTime now)
+        {
+            return (events ?? Enumerable.Empty<CalendarEvent>())
+                .Where(item => item != null && item.End > now && item.Start >= (primary?.Start ?? now)
+                    && !ReferenceEquals(item, primary)
+                    && !(primary != null && !string.IsNullOrEmpty(primary.Id) && item.Id == primary.Id
+                        && item.SourceId == primary.SourceId && item.CalendarId == primary.CalendarId && item.Start == primary.Start))
+                .OrderBy(item => item.Start).ThenBy(item => item.End).ThenBy(item => item.Title).ToList();
+        }
+
+        public static string TimeUntilStart(CalendarEvent item, DateTime now)
+        {
+            if (item == null) return "";
+            if (item.End <= now) return "Finalizada";
+            if (item.Start <= now) return "En curso";
+            var span = item.Start - now;
+            if (span.TotalMinutes < 1) return "En breve";
+            if (span.TotalDays >= 1) return "En " + (int)span.TotalDays + " d" + (span.Hours > 0 ? " " + span.Hours + " h" : "");
+            var minutes = (int)Math.Ceiling(span.TotalMinutes);
+            return minutes >= 60 ? "En " + minutes / 60 + " h" + (minutes % 60 > 0 ? " " + minutes % 60 + " min" : "") : "En " + minutes + " min";
+        }
+
         public static bool CanDismiss(CalendarEvent item, DateTime now) => item != null && !item.IsDismissed && item.End > now;
         public static string WidgetWhen(CalendarEvent item, DateTime now, bool use24HourClock)
         {
