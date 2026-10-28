@@ -7,6 +7,7 @@ on:
     paths:
       - 'Properties/AssemblyInfo.cs'
       - 'Installer/MeetingBar.iss'
+      - 'Installer/RELEASE_NOTES.md'
 
 permissions:
   contents: write
@@ -26,6 +27,8 @@ jobs:
           dotnet-version: 8.0.x
       - name: Read and validate release version
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $assembly = Get-Content Properties/AssemblyInfo.cs -Raw
           if ($assembly -notmatch 'AssemblyFileVersion\("([0-9.]+)"\)') { throw 'Application version missing' }
@@ -33,7 +36,15 @@ jobs:
           $installer = Get-Content Installer/MeetingBar.iss -Raw
           if ($installer -notmatch '#define AppVersion "([0-9.]+)"' -or $Matches[1] -ne $version) { throw 'Installer version does not match application' }
           "MEETINGBAR_VERSION=$version" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          gh release view "v$version" --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release edit "v$version" --title "MeetingBar Windows v$version - Outlook clásico y español" --notes-file Installer/RELEASE_NOTES.md --repo $env:GITHUB_REPOSITORY
+            if ($LASTEXITCODE -ne 0) { throw 'Release notes update failed' }
+            'MEETINGBAR_RELEASE_EXISTS=true' | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          }
+          exit 0
       - name: Build and test application
+        if: env.MEETINGBAR_RELEASE_EXISTS != 'true'
         shell: pwsh
         run: |
           ./build.ps1 -Configuration Release -Test -Package
@@ -47,6 +58,7 @@ jobs:
           ./Tests/bin/Release/net472/MeetingBar.Tests.exe --render-agenda "$env:RUNNER_TEMP/compact-agenda.png"
           if ($LASTEXITCODE -ne 0) { throw 'Agenda grouping check failed' }
       - name: Compile installer with preinstalled Inno Setup
+        if: env.MEETINGBAR_RELEASE_EXISTS != 'true'
         shell: pwsh
         run: |
           $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
@@ -54,6 +66,7 @@ jobs:
           & $compiler Installer/MeetingBar.iss
           if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
       - name: Verify install, configuration preservation and uninstall
+        if: env.MEETINGBAR_RELEASE_EXISTS != 'true'
         shell: pwsh
         run: |
           $configDir = Join-Path $env:APPDATA 'MeetingBar'
@@ -72,6 +85,7 @@ jobs:
           $result = Start-Process (Join-Path $testDir 'unins000.exe') -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -WindowStyle Hidden -Wait -PassThru
           if ($result.ExitCode -ne 0 -or (Test-Path (Join-Path $testDir 'MeetingBar.exe'))) { throw 'Uninstall failed' }
       - name: Publish release and assets
+        if: env.MEETINGBAR_RELEASE_EXISTS != 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
