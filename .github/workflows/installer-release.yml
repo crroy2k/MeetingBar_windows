@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: optimized-installer-release
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   installer:
@@ -83,7 +83,8 @@ jobs:
           if ($settings.AutoJoin -ne $true -or $settings.InstallerTestMarker -ne 'preserved' -or $settings.StartWithWindows -ne $false) { throw 'Settings preservation failed' }
           if (!(Test-Path (Join-Path $configDir 'settings.json.before-install.bak'))) { throw 'Configuration backup missing' }
           # Exercise the same silent handoff/relaunch flag used by the in-app updater.
-          $result = Start-Process $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/OTA=1',('/DIR="'+$testDir+'"')) -WindowStyle Hidden -Wait -PassThru
+          $result = Start-Process $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/OTA=1',('/DIR="'+$testDir+'"')) -WindowStyle Hidden -PassThru
+          if (!$result.WaitForExit(180000)) { throw 'OTA installer did not finish' }
           if ($result.ExitCode -ne 0) { throw 'OTA installer handoff failed' }
           $relaunched = $null
           for ($attempt = 0; $attempt -lt 20; $attempt++) {
