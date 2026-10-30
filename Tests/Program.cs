@@ -13,9 +13,14 @@ namespace MeetingBar.Tests
         [STAThread]
         private static void Main(string[] args)
         {
+            if (DiagnosticTests.RunChild(args)) return;
             if (args.Length > 0 && args[0] == "--render-widget") { RenderWidget(args[1]); return; }
             if (args.Length > 0 && args[0] == "--render-fallback") { RenderWidget(args[1], true); return; }
             if (args.Length > 0 && args[0] == "--render-agenda") { RenderAgenda(args[1]); return; }
+            Test("diagnostics identify clean exits and persist session metadata", DiagnosticTests.CleanExit);
+            Test("diagnostics detect a genuinely killed child process at next startup", DiagnosticTests.ForcedTermination);
+            Test("diagnostics preserve fatal and incomplete exits and recover corrupt markers", DiagnosticTests.FatalAndIncompleteExit);
+            Test("diagnostics rotate existing archives and exclude exception secrets", DiagnosticTests.RotationAndPrivacy);
             Test("scheduled list spans future days and excludes only the featured occurrence", () =>
             {
                 var now = new DateTime(2026, 10, 28, 10, 0, 0);

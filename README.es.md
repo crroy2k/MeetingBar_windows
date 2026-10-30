@@ -2,7 +2,11 @@
 
 MeetingBar muestra la reunión actual o siguiente en la bandeja del sistema y junto a la barra de tareas. Permite consultar la agenda, recibir recordatorios y abrir los enlaces de reunión.
 
-## Versión 0.1.0.9
+## Versión 0.1.0.10
+
+Se agregan registros locales de inicio y cierre, causas de salida conocidas, excepciones técnicas y últimas señales de actividad. Al abrir la app se detecta si la ejecución anterior no confirmó un cierre limpio. Consulta [Diagnóstico de cierres](docs/diagnostics.md) para localizar e interpretar los registros. No se envían a terceros ni se añaden reinicios automáticos.
+
+## Agenda
 
 La agenda muestra la próxima cita y, debajo de una división sutil, la lista **Programados** con los eventos posteriores. Cada evento incluye su título, fecha y hora, calendario y tiempo restante. La lista sigue la sincronización normal y los contadores se actualizan con el reloj de la aplicación. Al consultar otro día desde la línea de tiempo se conserva la vista por días.
 

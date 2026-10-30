@@ -278,13 +278,15 @@ public static class SettingsStore
 
 public static class SettingsLog
 {
-    public static void Write(string message)
+    public static void Info(string message) => WriteEntry("INFO", message);
+    public static void Write(string message) => WriteEntry("ERROR", message);
+    private static void WriteEntry(string level, string message)
     {
         try
         {
             Directory.CreateDirectory(SettingsStore.FolderPath);
             File.AppendAllText(Path.Combine(SettingsStore.FolderPath, "meetingbar.log"),
-                DateTimeOffset.Now.ToString("o") + " ERROR Settings UI: " + message.Replace('\r', ' ').Replace('\n', ' ') + Environment.NewLine);
+                DateTimeOffset.Now.ToString("o") + " " + level + " Settings UI: " + message.Replace('\r', ' ').Replace('\n', ' ') + Environment.NewLine);
         }
         catch { }
     }

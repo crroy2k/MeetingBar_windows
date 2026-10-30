@@ -50,10 +50,10 @@ namespace MeetingBar.Windows.Services
             menu.Items.Add("Actualizar", null, async (s, e) => await _sync.RefreshAsync());
             menu.Items.Add("Configuración", null, (s, e) => OpenSettings());
             menu.Items.Add(new Forms.ToolStripSeparator());
-            menu.Items.Add("Salir", null, (s, e) => Application.Current.Shutdown());
+            menu.Items.Add("Salir", null, (s, e) => { AppLog.RequestExit("tray-menu"); Application.Current.Shutdown(); });
             _tray.ContextMenuStrip = menu;
             _notifications = new NotificationService(_settings, _opener, _tray);
-            _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) }; _positionTimer.Tick += (s, e) => { EnsureWidgetVisible(); UpdateTrayIcon(_main.TaskbarEvent); };
+            _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) }; _positionTimer.Tick += (s, e) => { AppLog.UiAlive(); EnsureWidgetVisible(); UpdateTrayIcon(_main.TaskbarEvent); };
             _sync.Changed += (s, e) => Application.Current.Dispatcher.BeginInvoke(new Action(() => { UpdateTray(); WriteSettingsState(); WriteWinWWidgetState(); }));
             var parameters = new HwndSourceParameters("MeetingBar.MessageWindow") { Width = 0, Height = 0, WindowStyle = unchecked((int)0x80000000) };
             _messageWindow = new HwndSource(parameters); _messageWindow.AddHook(WndProc);
@@ -78,7 +78,12 @@ namespace MeetingBar.Windows.Services
                         using (var reader = new StreamReader(pipe))
                         {
                             var command = await reader.ReadLineAsync();
-                            _ = Application.Current.Dispatcher.BeginInvoke(new Action(() => ExecuteCommand(command)));
+                            if ((command ?? "").Trim().TrimStart('-').Equals("quit", StringComparison.OrdinalIgnoreCase))
+                            {
+                                uint clientPid;
+                                AppLog.Info("IPC quit received; clientPid=" + (GetNamedPipeClientProcessId(pipe.SafePipeHandle, out clientPid) ? clientPid.ToString() : "unknown"));
+                            }
+                            _ = Application.Current.Dispatcher.BeginInvoke(new Action(() => ExecuteCommand(command, "ipc")));
                         }
                     }
                 }
@@ -87,7 +92,10 @@ namespace MeetingBar.Windows.Services
             }
         }
 
-        public void ExecuteCommand(string command)
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetNamedPipeClientProcessId(Microsoft.Win32.SafeHandles.SafePipeHandle pipe, out uint processId);
+
+        public void ExecuteCommand(string command, string origin = "internal")
         {
             var normalized = (command ?? "popup").Trim().TrimStart('-').ToLowerInvariant();
             if (normalized.StartsWith("connect-google|", StringComparison.Ordinal))
@@ -110,7 +118,8 @@ namespace MeetingBar.Windows.Services
                 case "debug-notification": TriggerDebugNotification(false); break;
                 case "debug-reminder": TriggerDebugNotification(true); break;
                 case "debug-clear": _sync.ClearDebugEvents(); break;
-                case "quit": Application.Current.Shutdown(); break;
+                case "prepare-update": AppLog.UpdateRequested(); break;
+                case "quit": AppLog.RequestExit(origin == "ipc" ? "ipc-quit" : "startup-quit"); Application.Current.Shutdown(); break;
                 default: ShowPopup(); break;
             }
         }

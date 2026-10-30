@@ -70,6 +70,9 @@ public sealed partial class MainWindow
             CaptureCurrentPage(); SettingsStore.Save(_settings);
             var root = Directory.GetParent(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar))!.FullName;
             if (!File.Exists(Path.Combine(root, "MeetingBar.exe"))) throw new InvalidOperationException("No se encuentra la instalación de MeetingBar.");
+            SettingsLog.Info("Update installation requested; target=" + _updateRelease.Tag);
+            try { await SettingsStore.SendCommandAsync("prepare-update"); }
+            catch { SettingsLog.Write("Update intent could not be delivered to the running app"); }
             _updateService.Install(_updateFile, _updateRelease, root);
             _updateInstalling = true;
             Application.Current.Exit();

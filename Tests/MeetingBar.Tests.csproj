@@ -3,6 +3,6 @@
   <PropertyGroup><Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration><Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform><ProjectGuid>{1A292EDD-61B0-4139-B9DF-FBD4329C6B20}</ProjectGuid><OutputType>Exe</OutputType><RootNamespace>MeetingBar.Tests</RootNamespace><AssemblyName>MeetingBar.Tests</AssemblyName><TargetFramework>net472</TargetFramework><UseWPF>true</UseWPF><EnableDefaultItems>false</EnableDefaultItems><GenerateAssemblyInfo>false</GenerateAssemblyInfo><LangVersion>latest</LangVersion><OutputPath>bin\$(Configuration)\</OutputPath></PropertyGroup>
   <ItemGroup><Reference Include="System"/><Reference Include="System.Core"/><Reference Include="System.Drawing"/><Reference Include="System.Net.Http"/><Reference Include="System.Web.Extensions"/></ItemGroup>
   <ItemGroup><ProjectReference Include="..\MeetingBar.Windows.csproj"><Project>{B8E1DD23-C58D-4E46-8143-FA5BB498094D}</Project><Name>MeetingBar.Windows</Name></ProjectReference></ItemGroup>
-  <ItemGroup><Compile Include="Program.cs"/><Compile Include="UpdateTests.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="Program.cs"/><Compile Include="UpdateTests.cs"/><Compile Include="DiagnosticTests.cs"/></ItemGroup>
 
 </Project>

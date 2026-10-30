@@ -1,4 +1,23 @@
-# Versión 0.1.0.9 — Eventos programados en la agenda
+# Versión 0.1.0.10 — Diagnóstico de cierres
+
+- Registra la versión, PID e identificador de cada ejecución, además del motivo y código de salida cuando se conocen.
+- Distingue Salir desde la bandeja, órdenes de cierre locales (incluido el PID del cliente), cierre de sesión o apagado de Windows y solicitudes de instalación desde Ajustes.
+- Guarda cada minuto la última actividad del proceso y de la interfaz. Al arrancar detecta si la ejecución anterior terminó sin confirmar una salida limpia.
+- Registra excepciones fatales, tipos, HRESULT, métodos de la pila y excepciones internas, excluyendo mensajes libres y datos del calendario de esos nuevos detalles técnicos.
+- Corrige la rotación de registros para que siga funcionando aunque existan archivos anteriores; conserva tres archivos rotados y el marcador de la ejecución anterior.
+- Los registros son locales, no se generan volcados de memoria y no se envían a terceros. No cambia la integración con Outlook ni las actualizaciones manuales.
+
+## Cómo actualizar
+
+Abre Configuración → General → Buscar actualizaciones y confirma la descarga e instalación.
+
+Los registros se guardan en `%APPDATA%\MeetingBar`: `meetingbar.log`, sus archivos `.1` a `.3` y `diagnostic-session.json`.
+
+Si Windows termina el proceso a la fuerza o se corta la energía, no siempre es posible conocer la causa exacta. En ese caso se detectará la falta de salida confirmada al volver a abrir la aplicación. Esta mejora no reconstruye cierres de versiones anteriores.
+
+## Historial
+
+### Versión 0.1.0.9 — Eventos programados en la agenda
 
 - La vista inicial mantiene la tarjeta de la próxima cita y agrega debajo «Programados», con una separación sutil.
 - Muestra los eventos posteriores en orden cronológico, sin repetir la cita principal. Cada fila incluye título, fecha y hora, calendario y contador del tiempo restante.
