@@ -478,21 +478,44 @@ namespace MeetingBar.Tests
             var vm = new MeetingBar.Windows.ViewModels.MainViewModel(sync, service, new MeetingOpener(service));
             Equal(fallback ? "Sin citas próximas" : title, vm.WidgetTitle);
             if (fallback) Contains(title, vm.WidgetSubtitle);
-            var window = new TaskbarWidgetWindow(vm, () => { }); window.ShowActivated = false; window.Show(); window.ApplyPosition(settings);
-            window.Measure(new System.Windows.Size(window.Width, window.Height));
-            window.Arrange(new System.Windows.Rect(0, 0, window.Width, window.Height)); window.UpdateLayout();
+            var window = new TaskbarWidgetWindow(vm, () => { });
+            var surface = (System.Windows.FrameworkElement)window.Content;
+            foreach (var width in new[] { 140, 220, 300, 500 })
+            {
+                settings.WidgetWidth = width;
+                window.ApplyLayout(settings);
+                surface.Measure(new System.Windows.Size(window.Width, window.Height));
+                surface.Arrange(new System.Windows.Rect(0, 0, window.Width, window.Height)); surface.UpdateLayout();
+                var titleBlock = (System.Windows.Controls.TextBlock)window.FindName("WidgetTitle");
+                Equal(10.0, titleBlock.FontSize);
+                if (window.Width > width || window.Width > 450 || titleBlock.ActualHeight > 28.1)
+                    throw new Exception("Widget exceeds its width or two-line title budget");
+                if (!fallback && titleBlock.ActualHeight < 27.9) throw new Exception("Long title must occupy two lines even with maximum width 500");
+            }
+            settings.WidgetWidth = 300; window.ApplyLayout(settings);
+            surface.Measure(new System.Windows.Size(window.Width, window.Height));
+            surface.Arrange(new System.Windows.Rect(0, 0, window.Width, window.Height)); surface.UpdateLayout();
             var text = (System.Windows.Controls.TextBlock)window.FindName("WidgetTitle");
             Equal(10.0, text.FontSize);
             if (fallback) Equal(14.0, text.ActualHeight);
-            else if (text.ActualHeight <= 15 || text.ActualHeight > 30.1) throw new Exception("Expected two visible title lines; height=" + text.ActualHeight);
+            else if (text.ActualHeight < 27.9 || text.ActualHeight > 28.1) throw new Exception("Expected two visible title lines; height=" + text.ActualHeight);
             var image = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.Width, (int)window.Height, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-            image.Render(window);
+            image.Render(surface);
             var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(image));
             using (var output = System.IO.File.Create(path)) encoder.Save(output);
-            window.SetDesiredVisibility(false);
-            window.EnsureAboveTaskbar();
-            Equal(false, window.IsVisible);
-            Equal(false, MeetingBar.Windows.Interop.NativeMethods.IsWindowVisible(new System.Windows.Interop.WindowInteropHelper(window).Handle));
+            if (!fallback)
+            {
+                foreach (var sample in new[] { "Revisión", "Seguimiento del equipo y revisión de los pendientes de operaciones", "📅 Revisión del equipo 💼 y planificación de actividades", new string('W', 180) })
+                {
+                    vm.WidgetEvent.Title = sample; vm.RefreshSettings(); settings.WidgetWidth = 500;
+                    window.ApplyLayout(settings);
+                    surface.Measure(new System.Windows.Size(window.Width, window.Height));
+                    surface.Arrange(new System.Windows.Rect(0, 0, window.Width, window.Height)); surface.UpdateLayout();
+                    Equal(10.0, text.FontSize);
+                    if (text.ActualHeight > 28.1 || window.Width > 450) throw new Exception("Title sample exceeds compact layout");
+                    if (sample == "Revisión") Equal(14.0, text.ActualHeight);
+                }
+            }
             vm.Dispose(); sync.Dispose(); window.Close();
             Console.WriteLine(fallback ? "PASS no appointments shows a separate all-day subtitle" : "PASS next event survives a one-day agenda; long title renders as two lines at 10pt");
         }

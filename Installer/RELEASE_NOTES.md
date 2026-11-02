@@ -1,4 +1,19 @@
-# Versión 0.1.0.10 — Diagnóstico de cierres
+# Versión 0.1.0.11 — Título compacto en dos renglones
+
+- El título de la barra de tareas usa un tamaño compacto constante de 10 puntos, sin crecer cuando cabe en una sola línea.
+- El ancho se calcula para aprovechar dos renglones antes de extender el widget. Se respeta el ancho máximo configurado y se limita el crecimiento de la columna del título.
+- La hora mantiene una columna independiente y se recorta si el espacio es muy reducido, sin superponerse al título.
+- Los títulos largos tienen dos líneas de 14 puntos de alto, con un máximo total de 28. El texto completo sigue disponible al colocar el cursor encima.
+- Se conserva la segunda línea de información cuando no hay citas próximas y se corrige la referencia explícita a los recursos de emojis.
+- Se mantienen Outlook clásico, los registros de diagnóstico y las actualizaciones exclusivamente manuales.
+
+## Cómo actualizar
+
+Configuración → General → Buscar actualizaciones. No es necesario cambiar tus ajustes de ancho ni reinstalar manualmente.
+
+## Historial
+
+### Versión 0.1.0.10 — Diagnóstico de cierres
 
 - Registra la versión, PID e identificador de cada ejecución, además del motivo y código de salida cuando se conocen.
 - Distingue Salir desde la bandeja, órdenes de cierre locales (incluido el PID del cliente), cierre de sesión o apagado de Windows y solicitudes de instalación desde Ajustes.

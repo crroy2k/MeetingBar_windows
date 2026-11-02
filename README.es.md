@@ -2,7 +2,11 @@
 
 MeetingBar muestra la reunión actual o siguiente en la bandeja del sistema y junto a la barra de tareas. Permite consultar la agenda, recibir recordatorios y abrir los enlaces de reunión.
 
-## Versión 0.1.0.10
+## Versión 0.1.0.11
+
+El título de la barra de tareas conserva un tamaño compacto y aprovecha dos renglones sin extenderse innecesariamente. La hora queda separada y el nombre completo se puede consultar al colocar el cursor encima. Se respeta tu ancho máximo configurado.
+
+## Diagnóstico de cierres
 
 Se agregan registros locales de inicio y cierre, causas de salida conocidas, excepciones técnicas y últimas señales de actividad. Al abrir la app se detecta si la ejecución anterior no confirmó un cierre limpio. Consulta [Diagnóstico de cierres](docs/diagnostics.md) para localizar e interpretar los registros. No se envían a terceros ni se añaden reinicios automáticos.
 

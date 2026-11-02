@@ -85,8 +85,7 @@ namespace MeetingBar.Windows.Views
         private void Widget_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e) { _isHovered = false; UpdateSurfaceBackground(); }
         public void ApplyPosition(AppSettings settings)
         {
-            ApplyAppearance(settings);
-            Width = DesiredWidgetWidth(settings); Height = 40;
+            ApplyLayout(settings);
             var monitor = MeetingBar.Display.MonitorCatalog.Resolve(MeetingBar.Display.MonitorCatalog.GetAll(), settings.WidgetMonitorDevice);
             if (monitor == null) return;
             var taskbar = NativeMethods.FindWindow("Shell_TrayWnd", null);
@@ -125,23 +124,32 @@ namespace MeetingBar.Windows.Views
             var handle = new WindowInteropHelper(this).Handle;
             if (handle != IntPtr.Zero) NativeMethods.SetWindowPos(handle, NativeMethods.HwndTopmost, 0, 0, 0, 0, NativeMethods.SwpNoMove | NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow);
         }
+        internal void ApplyLayout(AppSettings settings)
+        {
+            ApplyAppearance(settings);
+            Width = DesiredWidgetWidth(settings); Height = 40;
+        }
         private double DesiredWidgetWidth(AppSettings settings)
         {
             var vm = DataContext as MainViewModel;
             var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-            var key = string.Join("|", vm?.WidgetTitle, vm?.WidgetSubtitle, vm?.WidgetTime, settings.WidgetWidth, settings.ShowServiceIcon, pixelsPerDip);
+            var key = string.Join("|", vm?.WidgetTitle, vm?.WidgetSubtitle, vm?.WidgetTime, settings.WidgetWidth, vm?.WidgetIconVisibility, pixelsPerDip);
             if (_layoutKey == key) return _cachedWidth;
             _layoutKey = key;
-            var title = Measure(vm?.WidgetTitle, 12, FontWeights.SemiBold, "Segoe UI", pixelsPerDip);
-            var time = Measure(vm?.WidgetTime, 11, FontWeights.Normal, "Segoe UI", pixelsPerDip);
-            title = Math.Max(title, Measure(vm?.WidgetSubtitle, 10, FontWeights.Normal, "Segoe UI", pixelsPerDip));
-            var content = 32 + (settings.ShowServiceIcon ? 16 : 0) + title + time;
-            var available = Math.Max(40, settings.WidgetWidth - 32 - (settings.ShowServiceIcon ? 16 : 0) - time);
-            var wraps = title > available;
-            WidgetTitle.FontSize = wraps || vm?.HasWidgetSubtitle == true ? 10 : 12;
-            WidgetTitle.LineHeight = vm?.HasWidgetSubtitle == true ? 14 : wraps ? 15 : 18;
-            WidgetTitle.MaxHeight = vm?.HasWidgetSubtitle == true ? 14 : wraps ? 30 : 18;
-            return _cachedWidth = Clamp(Math.Ceiling(content), 140, Math.Max(140, settings.WidgetWidth));
+            // Measure at the font actually rendered; reserve the time column before sizing two title lines.
+            WidgetTitle.FontSize = 10;
+            WidgetTitle.LineHeight = 14;
+            WidgetTitle.MaxHeight = vm?.HasWidgetSubtitle == true ? 14 : 28;
+            var maximum = Math.Max(140, settings.WidgetWidth);
+            var chrome = 30 + (vm?.WidgetIconVisibility == Visibility.Visible ? 16 : 0);
+            WidgetTime.MaxWidth = Math.Max(30, maximum - chrome - 60);
+            var title = Measure(vm?.WidgetTitle, 10, FontWeights.SemiBold, WidgetTitle.FontFamily.Source, pixelsPerDip);
+            var time = Math.Min(WidgetTime.MaxWidth, Measure(vm?.WidgetTime, 10, FontWeights.Normal, WidgetTime.FontFamily.Source, pixelsPerDip));
+            var available = Math.Max(40, maximum - chrome - time);
+            var preferred = title <= 160 ? title : Math.Min(220, Math.Max(100, Math.Ceiling(title / 2 + 12)));
+            if (vm?.HasWidgetSubtitle == true)
+                preferred = Math.Max(preferred, Math.Min(220, Measure(vm.WidgetSubtitle, 10, FontWeights.Normal, WidgetTitle.FontFamily.Source, pixelsPerDip)));
+            return _cachedWidth = Clamp(Math.Ceiling(chrome + Math.Min(preferred, available) + time), 140, maximum);
         }
         private void ApplyAppearance(AppSettings settings)
         {

@@ -64,14 +64,14 @@ namespace MeetingBar.Windows.Views
 
             public EmojiAtlas()
             {
-                var map = Application.GetResourceStream(new Uri("/Resources/Emoji/twemoji-map.txt", UriKind.Relative));
+                var map = Application.GetResourceStream(new Uri("/MeetingBar;component/Resources/Emoji/twemoji-map.txt", UriKind.Relative));
                 using (var reader = new StreamReader(map.Stream, Encoding.UTF8))
                     _indexes = reader.ReadToEnd().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                         .Select((key, index) => new { Key = key.Trim().TrimStart('\uFEFF'), Index = index })
                         .ToDictionary(item => item.Key, item => item.Index, StringComparer.OrdinalIgnoreCase);
                 var bitmap = new BitmapImage();
                 bitmap.BeginInit();
-                bitmap.UriSource = new Uri("pack://application:,,,/Resources/Emoji/twemoji-atlas.png", UriKind.Absolute);
+                bitmap.UriSource = new Uri("pack://application:,,,/MeetingBar;component/Resources/Emoji/twemoji-atlas.png", UriKind.Absolute);
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
                 bitmap.EndInit();
                 bitmap.Freeze();
