@@ -503,6 +503,19 @@ namespace MeetingBar.Tests
             image.Render(surface);
             var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(image));
             using (var output = System.IO.File.Create(path)) encoder.Save(output);
+            var tooltip = (System.Windows.Controls.ToolTip)text.ToolTip;
+            tooltip.PlacementTarget = text;
+            tooltip.GetBindingExpression(System.Windows.Controls.ContentControl.ContentProperty).UpdateTarget();
+            Equal(vm.WidgetTitle, tooltip.Content);
+            Equal(System.Windows.Media.Color.FromRgb(37, 37, 37), ((System.Windows.Media.SolidColorBrush)tooltip.Background).Color);
+            tooltip.Content = new string('W', 180);
+            tooltip.ApplyTemplate(); tooltip.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            tooltip.Arrange(new System.Windows.Rect(new System.Windows.Point(), tooltip.DesiredSize)); tooltip.UpdateLayout();
+            if (tooltip.ActualWidth > 344.1 || tooltip.ActualHeight < 40) throw new Exception("Tooltip must wrap within a compact dark panel");
+            var hoverImage = new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(tooltip.ActualWidth), (int)Math.Ceiling(tooltip.ActualHeight), 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            hoverImage.Render(tooltip);
+            var hoverEncoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); hoverEncoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(hoverImage));
+            using (var output = System.IO.File.Create(System.IO.Path.ChangeExtension(path, null) + "-hover.png")) hoverEncoder.Save(output);
             if (!fallback)
             {
                 foreach (var sample in new[] { "Revisión", "Seguimiento del equipo y revisión de los pendientes de operaciones", "📅 Revisión del equipo 💼 y planificación de actividades", new string('W', 180) })

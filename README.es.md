@@ -2,7 +2,11 @@
 
 MeetingBar muestra la reunión actual o siguiente en la bandeja del sistema y junto a la barra de tareas. Permite consultar la agenda, recibir recordatorios y abrir los enlaces de reunión.
 
-## Versión 0.1.0.11
+## Versión 0.1.0.12
+
+El aviso al pasar el mouse sobre el título o la hora usa un panel oscuro legible y de ancho limitado, con texto en varias líneas. Se conserva el título compacto de dos renglones.
+
+## Título compacto
 
 El título de la barra de tareas conserva un tamaño compacto y aprovecha dos renglones sin extenderse innecesariamente. La hora queda separada y el nombre completo se puede consultar al colocar el cursor encima. Se respeta tu ancho máximo configurado.
 

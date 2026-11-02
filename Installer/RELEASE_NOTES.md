@@ -1,4 +1,16 @@
-# Versión 0.1.0.11 — Título compacto en dos renglones
+# Versión 0.1.0.12 — Aviso del título legible al pasar el mouse
+
+- Corrige el aviso blanco casi ilegible que aparecía al colocar el mouse sobre el título o la hora de la barra de tareas.
+- Usa un panel oscuro con texto claro, borde sutil y ancho limitado. Los títulos largos se muestran completos en varias líneas, encima del widget.
+- Conserva la tipografía compacta y los dos renglones de la versión 0.1.0.11.
+
+## Cómo actualizar
+
+Configuración → General → Buscar actualizaciones. Se conservan tus ajustes y la integración con Outlook clásico.
+
+## Historial
+
+### Versión 0.1.0.11 — Título compacto en dos renglones
 
 - El título de la barra de tareas usa un tamaño compacto constante de 10 puntos, sin crecer cuando cabe en una sola línea.
 - El ancho se calcula para aprovechar dos renglones antes de extender el widget. Se respeta el ancho máximo configurado y se limita el crecimiento de la columna del título.
