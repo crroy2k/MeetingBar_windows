@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:MeetingBar.Windows.Views"
         Title="MeetingBar" Icon="/MeetingBar;component/Resources/MeetingBar.ico" Width="410" Height="650" WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
-        AllowsTransparency="False" Background="Transparent" Deactivated="Window_Deactivated">
-  <Border x:Name="PopupSurface" Background="#44202020" BorderBrush="#66767676" BorderThickness="1" CornerRadius="8" Padding="18" SnapsToDevicePixels="True">
+        AllowsTransparency="False" Background="#FF202020" Deactivated="Window_Deactivated">
+  <Border x:Name="PopupSurface" Background="#FF202020" BorderBrush="#66767676" BorderThickness="1" CornerRadius="8" Padding="18" SnapsToDevicePixels="True">
     <Grid>
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
       <TextBlock Grid.Row="4" Text="{Binding VersionLabel}" FontSize="9" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" Margin="0,7,0,0"/>

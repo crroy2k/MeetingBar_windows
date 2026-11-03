@@ -109,7 +109,7 @@ namespace MeetingBar.Windows.Services
                 case "create": _opener.CreateMeeting(); break;
                 case "calendar": if (_main.OpenCalendarCommand.CanExecute(null)) _main.OpenCalendarCommand.Execute(null); break;
                 case "refresh": _ = _sync.RefreshAsync(); break;
-                case "hide": _popup?.HideAnimated(); break;
+                case "hide": _popup?.HideAgenda(); break;
                 case "settings": OpenSettings(); break;
                 case "check-updates": ShowUpdates(); break;
                 case "reload": _ = ReloadSettings(); break;
@@ -167,7 +167,7 @@ namespace MeetingBar.Windows.Services
 
         private void TogglePopup()
         {
-            if (_popup?.IsOpen == true) { _popup.HideAnimated(); return; }
+            if (_popup?.IsOpen == true) { _popup.HideAgenda(); return; }
             if (_popup?.WasJustDismissed == true) return;
             ShowPopup();
         }
@@ -176,9 +176,8 @@ namespace MeetingBar.Windows.Services
             if (_popup == null)
             {
                 _popup = new PopupWindow(_main, () => OpenSettings());
-                _popup.Preload();
             }
-            PositionPopup(_popup); _popup.ShowAnimated();
+            PositionPopup(_popup); _popup.ShowAgenda();
         }
 
         private void PositionPopup(Window popup)

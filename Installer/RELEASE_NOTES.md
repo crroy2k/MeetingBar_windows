@@ -1,3 +1,7 @@
+# Versión 0.1.0.13 — Redibujado de la agenda
+
+La agenda se abre y oculta directamente desde WPF, con fondo sólido. Se elimina el desplazamiento nativo de apertura y cierre que podía dejar partes de la lista y los botones sin dibujar. Actualiza desde Configuración → General → Buscar actualizaciones.
+
 # Versión 0.1.0.12 — Aviso del título legible al pasar el mouse
 
 - Corrige el aviso blanco casi ilegible que aparecía al colocar el mouse sobre el título o la hora de la barra de tareas.
